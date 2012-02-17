@@ -28,7 +28,7 @@ precision third order tensors. The output is ANSI text, as plotting in
 Matlab or with matplotlib seemed like a fun problem rather than a central
 one. 
 
-I am confident if my implementation of these features:
+I am confident in my implementation of these features:
  l_x != l_y != l_z
  dx != dy != dz
  command line options for everything, including which method, physical setup, etc.
