@@ -6,7 +6,8 @@
 #include <stdlib.h> // exit
 #include <getopt.h> // getopt
 #include <string.h> // strlen
-#include <stdbool.h>
+#include <stdbool.h> // bool
+#include <assert.h> // assert
 void usage(char *name);
 
 int main(int argc, char *argv[])
