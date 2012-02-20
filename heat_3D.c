@@ -163,14 +163,13 @@ void cn(double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double **A, double Cx, double Cy, double Cz, bool periodic)
 {
+  long X = nrh-nrl+1; // include boundaries
+  long Y = nch-ncl+1;
+  long Z = ndh-ndl+1;
+  double *x = dvector(1, X*Y*Z);
+  double *b = dvector(1, X*Y*Z);
   if (periodic)
   {
-    long X = nrh-nrl+1; // include boundaries
-    long Y = nch-ncl+1;
-    long Z = ndh-ndl+1;
-    double *x = dvector(1, X*Y*Z);
-    double *b = dvector(1, X*Y*Z);
-  
     // flatten src into b
     for (int i = nrl; i <= nrh; i++)
       for (int j = ncl; j <= nch; j++)
@@ -195,15 +194,7 @@ void cn(double ***dst, double ***src,
       for (int j = ncl; j <= nch; j++)
         for (int k = ndl; k <= ndh; k++)
           dst[i][j][k] = x[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
-    free_dvector(x, 1, X*Y*Z);
-    free_dvector(b, 1, X*Y*Z);
   } else {
-    long X = nrh-nrl+1; // include constant boundaries, so they can influence other cells 
-    long Y = nch-ncl+1;
-    long Z = ndh-ndl+1;
-    double *x = dvector(1, X*Y*Z);
-    double *b = dvector(1, X*Y*Z);
-  
     // flatten src into b
     for (int i = nrl; i <= nrh; i++)
       for (int j = ncl; j <= nch; j++)
@@ -220,20 +211,17 @@ void cn(double ***dst, double ***src,
           *B += (k==ndl) ? 0 : Cz*src[i][j][k-1];
           *B += (k==ndh) ? 0 : Cz*src[i][j][k+1];
         }
-    // show_dvector("b", b, 1, X*Y*Z);
-  
     // solve Ax=b for x, using elimination
     gaussian_elimination(A, x, b, X*Y*Z);
-    // show_dvector("x", x, 1, X*Y*Z);
   
     // unflatten x into dst 
     for (int i = nrl+1; i <= nrh-1; i++)
       for (int j = ncl+1; j <= nch-1; j++)
         for (int k = ndl+1; k <= ndh-1; k++)
           dst[i][j][k] = x[1+((i-nrl-1)*Y+(j-ncl-1))*Z+(k-ndl-1)];
-    free_dvector(x, 1, X*Y*Z);
-    free_dvector(b, 1, X*Y*Z);
   }
+  free_dvector(x, 1, X*Y*Z);
+  free_dvector(b, 1, X*Y*Z);
 }
 
 void becs(double ***dst, double ***src,
