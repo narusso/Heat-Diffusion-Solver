@@ -1,1 +1,1 @@
-IGNOREC=nrutil.c gauss_elim.c heat_3D.c
+IGNOREC=nrutil.c gauss_elim.c heat_3D.c utilities.c

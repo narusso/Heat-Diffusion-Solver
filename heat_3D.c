@@ -1,6 +1,12 @@
-// Forward-Time, Centered Space, Backward Euler, and Crank-Nicolson, 3D Heat Diffusion in 1m^3 of copper
 #include "heat_3D.h"
-#include <signal.h>
+#include "gauss_elim.h" // gaussian_elimination
+#include "nrutil.h" // dmatrix, dvector, d3tensor, etc.
+#include <signal.h> // signal
+#include <stdio.h>  // printf
+#include <math.h>   // exp, pow
+#define __USE_BSD
+#include <unistd.h> // usleep
+#include <stdlib.h> // exit
 
 const char *methods[] = {
  [FTCS] = "Forward-Time Center-Space",
@@ -15,10 +21,6 @@ void reset(int s)
   if (s != SIGSTOP)
     exit(EXIT_FAILURE);
 }
-
-void debug(int line) { printf("%d\n", line); }
-void screen(const char *s) { printf(s); }
-// void screen(const char *s) {}
 
 void discretize(int nx, int ny, int nz, int nsteps, int sample, int pause,
                 double Cx, double Cy, double Cz,
@@ -327,69 +329,4 @@ void set_initial_with_noise(double ***T,
 double gauss3(double x, double y, double z)
 {
   return exp(-pow((5*x-2.5), 2))*exp(-pow((5*y-2.5), 2))*exp(-pow((5*z-2.5), 2));
-}
-
-void show_dvector(const char* s, double *v, long nl, long nh)
-{
-  printf("%s:\n", s);
-  for (long i = nl; i <= nh; i++)
-  {
-    show_scalar(v[i]);
-    printf(i%8 ? " " : "\n");
-  }
-  printf("\n");
-}
-
-void show_dmatrix(const char* s, double **T, long nrl, long nrh, long ncl, long nch)
-{
-  screen("[1H"); // move to top left corner of the screen
-  printf("%s:\n", s);
-  for (long i = nrl; i <= nrh; i++)
-  {
-    printf("%3ld: ", i);
-    for (long j = ncl; j <= nch; j++)
-      show_scalar(T[i][j]);
-    printf("\n");
-  }
-  printf("\n");
-}
-
-void show_d3tensor(const char* s, double ***T, long nrl, long nrh, long ncl, long nch, long ndl, long ndh)
-{
-  screen("[1H"); // move to top left corner of the screen
-  printf("%s:\n", s);
-  for (long k = ndl; k <= ndh; k++)
-  {
-    printf("k=%3ld\n", k);
-    for (long i = nrl; i <= nrh; i++)
-    {
-      printf("i=%3ld: ", i);
-      for (long j = ncl; j <= nch; j++)
-        show_scalar(T[i][j][k]);
-      printf("\n");
-    }
-    printf("\n");
-  }
-}
-
-void copy_d3tensor(double ***dst, double ***src, long nrl, long nrh, long ncl, long nch, long ndl, long ndh)
-{
-  for (int i = nrl; i <= nrh; i++)
-    for (int j = ncl; j <= nch; j++)
-      for (int k = ndl; k <= ndh; k++)
-        dst[i][j][k] = src[i][j][k];
-}
-
-void copy_dmatrix(double **dst, double **src, long nrl, long nrh, long ncl, long nch)
-{
-  for (int i = nrl; i <= nrh; i++)
-    for (int j = ncl; j <= nch; j++)
-      dst[i][j] = src[i][j];
-}
-
-void show_scalar(double x)
-{
-  if (x == 0) printf("[33m");
-  printf("%8.4f", x);
-  if (x == 0) printf("[m");
 }
