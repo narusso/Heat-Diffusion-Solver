@@ -235,27 +235,25 @@ void ftcs(double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double Cx, double Cy, double Cz, bool periodic)
 {
- if (periodic)
   for (int i = nrl; i <= nrh; i++)            // calculate new values for all cells
     for (int j = ncl; j <= nch; j++)
       for (int k = ndl; k <= ndh; k++)
       {
-        long left, right;
         dst[i][j][k] = src[i][j][k];
-        left = (i == nrl) ? nrh : i-1; right = (i == nrh) ? nrl : i+1;
-        dst[i][j][k] += Cx*(src[left][j][k] + src[right][j][k] - 2*src[i][j][k]);
-        left = (j == ncl) ? nch : j-1; right = (j == nch) ? ncl : j+1;
-        dst[i][j][k] += Cy*(src[i][left][k] + src[i][right][k] - 2*src[i][j][k]);
-        left = (k == ndl) ? ndh : k-1; right = (k == ndh) ? ndl : k+1;
-        dst[i][j][k] += Cz*(src[i][j][left] + src[i][j][right] - 2*src[i][j][k]);
+        if (periodic) {
+          long left, right;
+          left = (i == nrl) ? nrh : i-1; right = (i == nrh) ? nrl : i+1;
+          dst[i][j][k] += Cx*(src[left][j][k] + src[right][j][k] - 2*src[i][j][k]);
+          left = (j == ncl) ? nch : j-1; right = (j == nch) ? ncl : j+1;
+          dst[i][j][k] += Cy*(src[i][left][k] + src[i][right][k] - 2*src[i][j][k]);
+          left = (k == ndl) ? ndh : k-1; right = (k == ndh) ? ndl : k+1;
+          dst[i][j][k] += Cz*(src[i][j][left] + src[i][j][right] - 2*src[i][j][k]);
+        } else if (!(i==nrl || i==nrh || j==ncl ||j==nch || k==ndl || k==ndh)) {
+            dst[i][j][k] += Cx*(src[i-1][j][k] + src[i+1][j][k] - 2*src[i][j][k]) +
+                            Cy*(src[i][j-1][k] + src[i][j+1][k] - 2*src[i][j][k]) +
+                            Cz*(src[i][j][k-1] + src[i][j][k+1] - 2*src[i][j][k]);
+        }
       }
-  else
-    for (int i = nrl+1; i <= nrh-1; i++)      // calculate new values for the non-boundaries
-      for (int j = ncl+1; j <= nch-1; j++)
-        for (int k = ndl+1; k <= ndh-1; k++)
-          dst[i][j][k] = src[i][j][k] + Cx*(src[i-1][j][k] + src[i+1][j][k] - 2*src[i][j][k])
-                                      + Cy*(src[i][j-1][k] + src[i][j+1][k] - 2*src[i][j][k])
-                                      + Cz*(src[i][j][k-1] + src[i][j][k+1] - 2*src[i][j][k]);
 }
 
 void set_constant_boundary(double ***T,
