@@ -39,7 +39,7 @@ I am confident in my implementation of these features:
  periodic boundary conditions
 
 These features are broken or suspicious:
- non-zero constant boundary conditions are not correct on CN and BE, not sure where the problem is
+ constant boundary conditions are not correct on CN, values change asymmetrically
 
 These features were not attempted:
  ADI CN
