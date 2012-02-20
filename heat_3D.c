@@ -1,5 +1,6 @@
 #include "heat_3D.h"
 #include "gauss_elim.h" // gaussian_elimination
+#include "utilities.h" // screen, etc.
 #include "nrutil.h" // dmatrix, dvector, d3tensor, etc.
 #include <signal.h> // signal
 #include <stdio.h>  // printf
