@@ -17,8 +17,8 @@ const char *methods[] = {
 
 void reset(int s)
 {
-  printf("[m");
-  printf("[?25h");
+  printf("\033[m");
+  printf("\033[?25h");
   if (s != SIGSTOP)
     exit(EXIT_FAILURE);
 }
@@ -30,8 +30,8 @@ void discretize(int nx, int ny, int nz, int nsteps, int sample, int pause,
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
   signal(SIGPIPE, reset); // doesn't reset cursor
-  screen("[2J");        // clear screen
-  screen("[?25l");      // hide cursor
+  screen("\033[2J");        // clear screen
+  screen("\033[?25l");      // hide cursor
 
   double *x, *y, *z, ***T, ***Tnew;
   double **A, **constA;   // in case we use BE or CN
@@ -100,7 +100,7 @@ void discretize(int nx, int ny, int nz, int nsteps, int sample, int pause,
   }
   free_d3tensor(T, 1, Xdim, 1, Ydim, 1, Zdim);
   free_d3tensor(Tnew, 1, Xdim, 1, Ydim, 1, Zdim);
-  screen("[?25h"); // show cursor$
+  screen("\033[?25h"); // show cursor$
 }
 
 void populate_becs_matrix(double **A, long Xdim, long Ydim, long Zdim, 
