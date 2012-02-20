@@ -1,4 +1,8 @@
 #include "gauss_elim.h"
+#include "nrutil.h" // nrerror
+#include <stdlib.h> // malloc and free
+#include <string.h> // memcpy
+#include <math.h>   // fabs
 
 void gaussian_elimination(double **A, double *x, double *b, int n)
 {
