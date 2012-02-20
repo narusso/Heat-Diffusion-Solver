@@ -5,9 +5,9 @@
 
 enum method { FTCS, BE, CN };
 
-void discretize(int nx, int ny, int nz, int nsteps, int sample, int pause,
-                double Cx, double Cy, double Cz,
-                double(*f)(double,double,double), double max, double boundary, bool periodic, enum method);
+void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
+           double Cx, double Cy, double Cz,
+           double(*f)(double,double,double), double max, double boundary, bool periodic, enum method);
 void ftcs(double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double Cx, double Cy, double Cz, bool periodic);

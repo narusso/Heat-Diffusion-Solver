@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
   Cz = alpha*dt/(dz*dz);
 
   srand(getpid()*time(NULL));
-  discretize(nx, ny, nz, nsteps, sample, pause, Cx, Cy, Cz, gauss3, noise, boundary, periodic, meth);
+  solve(nx, ny, nz, nsteps, sample, pause, Cx, Cy, Cz, gauss3, noise, boundary, periodic, meth);
   exit(EXIT_SUCCESS);
 }
 

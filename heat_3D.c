@@ -23,9 +23,9 @@ void reset(int s)
     exit(EXIT_FAILURE);
 }
 
-void discretize(int nx, int ny, int nz, int nsteps, int sample, int pause,
-                double Cx, double Cy, double Cz,
-                double(*init)(double,double,double), double max, double boundary, bool periodic, enum method m)
+void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
+           double Cx, double Cy, double Cz,
+           double(*init)(double,double,double), double max, double boundary, bool periodic, enum method m)
 {
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
