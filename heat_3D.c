@@ -64,8 +64,6 @@ void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
 
   for (int n=1; n <= nsteps; n++)        // repeat the loop nsteps times
   {
-    if (!periodic) set_constant_boundary(Tnew, 1, Xdim, 1, Ydim, 1, Zdim, boundary);
-
     if (m == FTCS)
     {
       ftcs(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, Cx, Cy, Cz, periodic);
@@ -168,58 +166,39 @@ void cn(double ***dst, double ***src,
   long Z = ndh-ndl+1;
   double *x = dvector(1, X*Y*Z);
   double *b = dvector(1, X*Y*Z);
-  if (periodic)
-  {
-    // flatten src into b
-    for (int i = nrl; i <= nrh; i++)
-      for (int j = ncl; j <= nch; j++)
-        for (int k = ndl; k <= ndh; k++)
-        {
-          double *B = &b[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
+  // flatten src into b
+  for (int i = nrl; i <= nrh; i++)
+    for (int j = ncl; j <= nch; j++)
+      for (int k = ndl; k <= ndh; k++)
+      {
+        double *B = &b[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
+        *B = src[i][j][k];
+        if (periodic) {
           long left, right;
-          *B = src[i][j][k];
           left = (i == nrl) ? nrh : i-1; right = (i == nrh) ? nrl : i+1;
           *B += Cx*(src[left][j][k] + src[right][j][k] - 2*src[i][j][k]);
           left = (j == ncl) ? nch : j-1; right = (j == nch) ? ncl : j+1;
           *B += Cy*(src[i][left][k] + src[i][right][k] - 2*src[i][j][k]);
           left = (k == ndl) ? ndh : k-1; right = (k == ndh) ? ndl : k+1;
           *B += Cz*(src[i][j][left] + src[i][j][right] - 2*src[i][j][k]);
-        }
-  
-    // solve Ax=b for x, using elimination
-    gaussian_elimination(A, x, b, X*Y*Z);
-  
-    // unflatten x into dst 
-    for (int i = nrl; i <= nrh; i++)
-      for (int j = ncl; j <= nch; j++)
-        for (int k = ndl; k <= ndh; k++)
-          dst[i][j][k] = x[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
-  } else {
-    // flatten src into b
-    for (int i = nrl; i <= nrh; i++)
-      for (int j = ncl; j <= nch; j++)
-        for (int k = ndl; k <= ndh; k++)
-        {
-          double *B = &b[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
-          *B = src[i][j][k] - 2*Cx*src[i][j][k] - 2*Cy*src[i][j][k] - 2*Cz*src[i][j][k];
+        } else if (!(i==nrl || i==nrh || j==ncl ||j==nch || k==ndl || k==ndh)) {
+          *B += - 2*Cx*src[i][j][k] - 2*Cy*src[i][j][k] - 2*Cz*src[i][j][k];
           *B += (i==nrl) ? 0 : Cx*src[i-1][j][k];
           *B += (i==nrh) ? 0 : Cx*src[i+1][j][k];
-
           *B += (j==ncl) ? 0 : Cy*src[i][j-1][k];
           *B += (j==nch) ? 0 : Cy*src[i][j+1][k];
-
           *B += (k==ndl) ? 0 : Cz*src[i][j][k-1];
           *B += (k==ndh) ? 0 : Cz*src[i][j][k+1];
         }
-    // solve Ax=b for x, using elimination
-    gaussian_elimination(A, x, b, X*Y*Z);
+      }
+  // solve Ax=b for x, using elimination
+  gaussian_elimination(A, x, b, X*Y*Z);
   
-    // unflatten x into dst 
-    for (int i = nrl+1; i <= nrh-1; i++)
-      for (int j = ncl+1; j <= nch-1; j++)
-        for (int k = ndl+1; k <= ndh-1; k++)
-          dst[i][j][k] = x[1+((i-nrl-1)*Y+(j-ncl-1))*Z+(k-ndl-1)];
-  }
+  // unflatten x into dst 
+  for (int i = nrl; i <= nrh; i++)
+    for (int j = ncl; j <= nch; j++)
+      for (int k = ndl; k <= ndh; k++)
+        dst[i][j][k] = x[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
   free_dvector(x, 1, X*Y*Z);
   free_dvector(b, 1, X*Y*Z);
 }

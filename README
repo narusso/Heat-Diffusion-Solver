@@ -38,9 +38,6 @@ I am confident in my implementation of these features:
  guassian curve with noise
  periodic boundary conditions
 
-These features are broken or suspicious:
- constant boundary conditions are not correct on CN, values change asymmetrically
-
 These features were not attempted:
  ADI CN
  source term
