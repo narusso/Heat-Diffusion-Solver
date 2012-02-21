@@ -164,13 +164,13 @@ void cn(const prefs3D *p, temp3D *d, temp3D *s,
   long Y = s->nch-s->ncl+1;
   long Z = s->ndh-s->ndl+1;
   double *x = dvector(1, X*Y*Z);
-  double *b = dvector(1, X*Y*Z);
+  temp3D *b = create_temp3D(1, X, 1, Y, 1, Z);
   // flatten src into b
   for (int i = s->nrl; i <= s->nrh; i++)
     for (int j = s->ncl; j <= s->nch; j++)
       for (int k = s->ndl; k <= s->ndh; k++)
       {
-        double *B = &b[1+((i-s->nrl)*Y+(j-s->ncl))*Z+(k-s->ndl)];
+        double *B = &b->T[i][j][k];
         *B = s->T[i][j][k];
         if (p->periodic) {
           long left, right;
@@ -191,7 +191,7 @@ void cn(const prefs3D *p, temp3D *d, temp3D *s,
         }
       }
   // solve Ax=b for x, using elimination
-  gaussian_elimination(A, x, b, X*Y*Z);
+  gaussian_elimination(A, x, (double *) b->T[1][1], X*Y*Z); // b must be a 1-based 1D vector
   
   // unflatten x into dst 
   for (int i = d->nrl; i <= d->nrh; i++)
@@ -199,7 +199,7 @@ void cn(const prefs3D *p, temp3D *d, temp3D *s,
       for (int k = d->ndl; k <= d->ndh; k++)
         d->T[i][j][k] = x[1+((i-d->nrl)*Y+(j-d->ncl))*Z+(k-d->ndl)];
   free_dvector(x, 1, X*Y*Z);
-  free_dvector(b, 1, X*Y*Z);
+  free_temp3D(b);
 }
 
 void becs(temp3D *d, temp3D *s,
