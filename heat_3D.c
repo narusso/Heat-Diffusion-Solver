@@ -25,7 +25,7 @@ void reset(int s)
 
 void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int pause,
            double Cx, double Cy, double Cz,
-           double(*init)(double,double,double), double noise, double boundary)
+           double(*init)(double,double,double))
 {
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
@@ -48,8 +48,8 @@ void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int
   T      = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
   Tnew   = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
 
-  set_initial_with_noise(p, T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init, p->noise);
-  if (!p->periodic) set_constant_boundary(p, T, 1, Xdim, 1, Ydim, 1, Zdim, p->boundary);
+  set_initial_with_noise(p, T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init);
+  if (!p->periodic) set_constant_boundary(p, T, 1, Xdim, 1, Ydim, 1, Zdim);
 
   show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
   usleep(p->pause*2);
@@ -257,31 +257,30 @@ void ftcs(const prefs3D *p, double ***dst, double ***src,
 }
 
 void set_constant_boundary(const prefs3D *p, double ***T,
-                           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
-                           double value)
+                           long nrl, long nrh, long ncl, long nch, long ndl, long ndh)
 {
   // first row
   for (int j = ncl; j <= nch; j++)
     for (int k = ndl; k <= ndh; k++)
-      T[nrl][j][k] = value;
+      T[nrl][j][k] = p->boundary;
   // middle rows
   for (int i = nrl+1; i < nrh; i++)
   {
     // first column, then middle columns, than last column
-    for (int k = ndl; k <= ndh; k++) T[i][ncl][k] = value;
-    for (int j = ncl+1; j < nch; j++) T[i][j][ndl] = T[i][j][ndh] = value;
-    for (int k = ndl; k <= ndh; k++) T[i][nch][k] = value;
+    for (int k = ndl; k <= ndh; k++) T[i][ncl][k] = p->boundary;
+    for (int j = ncl+1; j < nch; j++) T[i][j][ndl] = T[i][j][ndh] = p->boundary;
+    for (int k = ndl; k <= ndh; k++) T[i][nch][k] = p->boundary;
   }
   // last row
   for (int j = ncl; j <= nch; j++)
     for (int k = ndl; k <= ndh; k++)
-      T[nrh][j][k] = value;
+      T[nrh][j][k] = p->boundary;
 }
 
 void set_initial_with_noise(const prefs3D *p, double ***T,
                             long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
                             double *x, double *y, double *z,
-                            double(*init)(double,double,double), double noise)
+                            double(*init)(double,double,double))
 {
   // if the initial number is I, the result will be between (1-noise)*I and (1+noise)*I
   double A = 1 - p->noise;
