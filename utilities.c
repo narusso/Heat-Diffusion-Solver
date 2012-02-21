@@ -1,4 +1,6 @@
 #include "utilities.h"
+#include "nrutil.h"
+#include <stdlib.h> // malloc and free
 #include <stdio.h> // printf
 
 void debug(int line) { printf("%d\n", line); }
@@ -68,4 +70,23 @@ void show_scalar(double x)
   if (x == 0) printf("\033[33m");
   printf("%8.4f", x);
   if (x == 0) printf("\033[m");
+}
+
+temp3D *create_temp3D(long nrl, long nrh, long ncl, long nch, long ndl, long ndh)
+{
+  temp3D *t;
+  t = (temp3D *) malloc((size_t) sizeof(temp3D));
+  if (!t) nrerror("allocation failure in create_temp3D()");
+  t->T = d3tensor(nrl, nrh, ncl, nch, ndl, ndh);
+  t->nrl = nrl; t->nrh = nrh;
+  t->ncl = ncl; t->nch = nch;
+  t->ndl = ndl; t->ndh = ndh;
+  return t;
+}
+
+void free_temp3D(temp3D *t)
+{
+  free_d3tensor(t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
+  t->T = NULL;
+  free(t);
 }

@@ -33,7 +33,7 @@ void solve(const prefs3D *p,
   screen("\033[2J");        // clear screen
   screen("\033[?25l");      // hide cursor
 
-  double *x, *y, *z, ***T, ***Tnew;
+  double *x, *y, *z;
   double **A, **constA;   // in case we use BE or CN
   int Xdim = p->nx+2;
   int Ydim = p->ny+2;
@@ -45,13 +45,13 @@ void solve(const prefs3D *p,
   for (int j = 1; j <= Ydim; j++) y[j] = (j-1) / (double) (p->ny+1);
   for (int k = 1; k <= Zdim; k++) z[k] = (k-1) / (double) (p->nz+1);
 
-  T      = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
-  Tnew   = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
+  temp3D *t = create_temp3D(1, Xdim, 1, Ydim, 1, Zdim);
+  temp3D *tnew = create_temp3D(1, Xdim, 1, Ydim, 1, Zdim);
+  
+  if (!p->periodic) set_constant_boundary(p, t);
+  set_initial_with_noise(p, t, x, y, z, init);
 
-  if (!p->periodic) set_constant_boundary(p, T, 1, Xdim, 1, Ydim, 1, Zdim);
-  set_initial_with_noise(p, T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init);
-
-  show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
+  show_d3tensor("T", t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
   usleep(p->pause*2);
 
   if (p->method == BE || p->method == CN)
@@ -66,24 +66,24 @@ void solve(const prefs3D *p,
   {
     if (p->method == FTCS)
     {
-      ftcs(p, Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, Cx, Cy, Cz);
+      ftcs(p, tnew, t, Cx, Cy, Cz);
     } else if (p->method == BE)
     {
       copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
-      becs(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A);
+      becs(tnew, t, A);
     }
     else if (p->method == CN)
     {
       copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
-      cn(p, Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A, Cx, Cy, Cz);
+      cn(p, tnew, t, A, Cx, Cy, Cz);
     }
 
-    copy_d3tensor(T, Tnew, 1, Xdim, 1, Ydim, 1, Zdim); // update T to the new values
+    copy_d3tensor(t->T, tnew->T, tnew->nrl, tnew->nrh, tnew->ncl, tnew->nch, tnew->ndl, tnew->ndh); // update T to the new values
 
     if (n%p->sample == 0)
     {
       printf("%s %d\n", methodnames[p->method], n);
-      show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
+      show_d3tensor("T", t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
       usleep(p->pause);
     }
   }
@@ -96,8 +96,8 @@ void solve(const prefs3D *p,
     free_dmatrix(A, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
     free_dmatrix(constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
   }
-  free_d3tensor(T, 1, Xdim, 1, Ydim, 1, Zdim);
-  free_d3tensor(Tnew, 1, Xdim, 1, Ydim, 1, Zdim);
+  free_temp3D(t);
+  free_temp3D(tnew);
   screen("\033[?25h"); // show cursor$
 }
 
@@ -157,139 +157,135 @@ void populate_becs_matrix(const prefs3D *p, double **A, long Xdim, long Ydim, lo
   // show_dmatrix("A", A, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
 }
 
-void cn(const prefs3D *p, double ***dst, double ***src,
-          long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
+void cn(const prefs3D *p, temp3D *d, temp3D *s,
           double **A, double Cx, double Cy, double Cz)
 {
-  long X = nrh-nrl+1; // include boundaries
-  long Y = nch-ncl+1;
-  long Z = ndh-ndl+1;
+  long X = s->nrh-s->nrl+1; // include boundaries
+  long Y = s->nch-s->ncl+1;
+  long Z = s->ndh-s->ndl+1;
   double *x = dvector(1, X*Y*Z);
   double *b = dvector(1, X*Y*Z);
   // flatten src into b
-  for (int i = nrl; i <= nrh; i++)
-    for (int j = ncl; j <= nch; j++)
-      for (int k = ndl; k <= ndh; k++)
+  for (int i = s->nrl; i <= s->nrh; i++)
+    for (int j = s->ncl; j <= s->nch; j++)
+      for (int k = s->ndl; k <= s->ndh; k++)
       {
-        double *B = &b[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
-        *B = src[i][j][k];
+        double *B = &b[1+((i-s->nrl)*Y+(j-s->ncl))*Z+(k-s->ndl)];
+        *B = s->T[i][j][k];
         if (p->periodic) {
           long left, right;
-          left = (i == nrl) ? nrh : i-1; right = (i == nrh) ? nrl : i+1;
-          *B += Cx*(src[left][j][k] + src[right][j][k] - 2*src[i][j][k]);
-          left = (j == ncl) ? nch : j-1; right = (j == nch) ? ncl : j+1;
-          *B += Cy*(src[i][left][k] + src[i][right][k] - 2*src[i][j][k]);
-          left = (k == ndl) ? ndh : k-1; right = (k == ndh) ? ndl : k+1;
-          *B += Cz*(src[i][j][left] + src[i][j][right] - 2*src[i][j][k]);
-        } else if (!(i==nrl || i==nrh || j==ncl ||j==nch || k==ndl || k==ndh)) {
-          *B += - 2*Cx*src[i][j][k] - 2*Cy*src[i][j][k] - 2*Cz*src[i][j][k];
-          *B += (i==nrl) ? 0 : Cx*src[i-1][j][k];
-          *B += (i==nrh) ? 0 : Cx*src[i+1][j][k];
-          *B += (j==ncl) ? 0 : Cy*src[i][j-1][k];
-          *B += (j==nch) ? 0 : Cy*src[i][j+1][k];
-          *B += (k==ndl) ? 0 : Cz*src[i][j][k-1];
-          *B += (k==ndh) ? 0 : Cz*src[i][j][k+1];
+          left = (i == s->nrl) ? s->nrh : i-1; right = (i == s->nrh) ? s->nrl : i+1;
+          *B += Cx*(s->T[left][j][k] + s->T[right][j][k] - 2*s->T[i][j][k]);
+          left = (j == s->ncl) ? s->nch : j-1; right = (j == s->nch) ? s->ncl : j+1;
+          *B += Cy*(s->T[i][left][k] + s->T[i][right][k] - 2*s->T[i][j][k]);
+          left = (k == s->ndl) ? s->ndh : k-1; right = (k == s->ndh) ? s->ndl : k+1;
+          *B += Cz*(s->T[i][j][left] + s->T[i][j][right] - 2*s->T[i][j][k]);
+        } else if (!(i==s->nrl || i==s->nrh || j==s->ncl ||j==s->nch || k==s->ndl || k==s->ndh)) {
+          *B += - 2*Cx*s->T[i][j][k] - 2*Cy*s->T[i][j][k] - 2*Cz*s->T[i][j][k];
+          *B += (i==s->nrl) ? 0 : Cx*s->T[i-1][j][k];
+          *B += (i==s->nrh) ? 0 : Cx*s->T[i+1][j][k];
+          *B += (j==s->ncl) ? 0 : Cy*s->T[i][j-1][k];
+          *B += (j==s->nch) ? 0 : Cy*s->T[i][j+1][k];
+          *B += (k==s->ndl) ? 0 : Cz*s->T[i][j][k-1];
+          *B += (k==s->ndh) ? 0 : Cz*s->T[i][j][k+1];
         }
       }
   // solve Ax=b for x, using elimination
   gaussian_elimination(A, x, b, X*Y*Z);
   
   // unflatten x into dst 
-  for (int i = nrl; i <= nrh; i++)
-    for (int j = ncl; j <= nch; j++)
-      for (int k = ndl; k <= ndh; k++)
-        dst[i][j][k] = x[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
+  for (int i = d->nrl; i <= d->nrh; i++)
+    for (int j = d->ncl; j <= d->nch; j++)
+      for (int k = d->ndl; k <= d->ndh; k++)
+        d->T[i][j][k] = x[1+((i-d->nrl)*Y+(j-d->ncl))*Z+(k-d->ndl)];
   free_dvector(x, 1, X*Y*Z);
   free_dvector(b, 1, X*Y*Z);
 }
 
-void becs(double ***dst, double ***src,
-          long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
+void becs(temp3D *d, temp3D *s,
           double **A)
 {
-  long X = nrh-nrl+1; // include boundaries
-  long Y = nch-ncl+1;
-  long Z = ndh-ndl+1;
+  long X = s->nrh-s->nrl+1; // include boundaries
+  long Y = s->nch-s->ncl+1;
+  long Z = s->ndh-s->ndl+1;
   double *x = dvector(1, X*Y*Z);
   double *b = dvector(1, X*Y*Z);
   // flatten src into b
-  for (int i = nrl; i <= nrh; i++)
-    for (int j = ncl; j <= nch; j++)
-      for (int k = ndl; k <= ndh; k++)
-        b[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)] = src[i][j][k];
+  for (int i = s->nrl; i <= s->nrh; i++)
+    for (int j = s->ncl; j <= s->nch; j++)
+      for (int k = s->ndl; k <= s->ndh; k++)
+        b[1+((i-s->nrl)*Y+(j-s->ncl))*Z+(k-s->ndl)] = s->T[i][j][k];
 
   // solve Ax=b for x, using elimination
   gaussian_elimination(A, x, b, X*Y*Z);
 
   // unflatten x into dst 
-  for (int i = nrl; i <= nrh; i++)
-    for (int j = ncl; j <= nch; j++)
-      for (int k = ndl; k <= ndh; k++)
-        dst[i][j][k] = x[1+((i-nrl)*Y+(j-ncl))*Z+(k-ndl)];
+  for (int i = d->nrl; i <= d->nrh; i++)
+    for (int j = d->ncl; j <= d->nch; j++)
+      for (int k = d->ndl; k <= d->ndh; k++)
+        d->T[i][j][k] = x[1+((i-d->nrl)*Y+(j-d->ncl))*Z+(k-d->ndl)];
 
   free_dvector(x, 1, X*Y*Z);
   free_dvector(b, 1, X*Y*Z);
 }
 
-void ftcs(const prefs3D *p, double ***dst, double ***src,
-          long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
+void ftcs(const prefs3D *p, temp3D *d, temp3D *s,
           double Cx, double Cy, double Cz)
 {
-  for (int i = nrl; i <= nrh; i++)            // calculate new values for all cells
-    for (int j = ncl; j <= nch; j++)
-      for (int k = ndl; k <= ndh; k++)
+  for (int i = s->nrl; i <= s->nrh; i++)            // calculate new values for all cells
+    for (int j = s->ncl; j <= s->nch; j++)
+      for (int k = s->ndl; k <= s->ndh; k++)
       {
-        dst[i][j][k] = src[i][j][k];
+        d->T[i][j][k] = s->T[i][j][k];
         if (p->periodic) {
           long left, right;
-          left = (i == nrl) ? nrh : i-1; right = (i == nrh) ? nrl : i+1;
-          dst[i][j][k] += Cx*(src[left][j][k] + src[right][j][k] - 2*src[i][j][k]);
-          left = (j == ncl) ? nch : j-1; right = (j == nch) ? ncl : j+1;
-          dst[i][j][k] += Cy*(src[i][left][k] + src[i][right][k] - 2*src[i][j][k]);
-          left = (k == ndl) ? ndh : k-1; right = (k == ndh) ? ndl : k+1;
-          dst[i][j][k] += Cz*(src[i][j][left] + src[i][j][right] - 2*src[i][j][k]);
-        } else if (!(i==nrl || i==nrh || j==ncl ||j==nch || k==ndl || k==ndh)) {
-            dst[i][j][k] += Cx*(src[i-1][j][k] + src[i+1][j][k] - 2*src[i][j][k]) +
-                            Cy*(src[i][j-1][k] + src[i][j+1][k] - 2*src[i][j][k]) +
-                            Cz*(src[i][j][k-1] + src[i][j][k+1] - 2*src[i][j][k]);
+          left = (i == s->nrl) ? s->nrh : i-1; right = (i == s->nrh) ? s->nrl : i+1;
+          d->T[i][j][k] += Cx*(s->T[left][j][k] + s->T[right][j][k] - 2*s->T[i][j][k]);
+          left = (j == s->ncl) ? s->nch : j-1; right = (j == s->nch) ? s->ncl : j+1;
+          d->T[i][j][k] += Cy*(s->T[i][left][k] + s->T[i][right][k] - 2*s->T[i][j][k]);
+          left = (k == s->ndl) ? s->ndh : k-1; right = (k == s->ndh) ? s->ndl : k+1;
+          d->T[i][j][k] += Cz*(s->T[i][j][left] + s->T[i][j][right] - 2*s->T[i][j][k]);
+        } else if (!(i==s->nrl || i==s->nrh || j==s->ncl ||j==s->nch || k==s->ndl || k==s->ndh)) {
+            d->T[i][j][k] += Cx*(s->T[i-1][j][k] + s->T[i+1][j][k] - 2*s->T[i][j][k]) +
+                            Cy*(s->T[i][j-1][k] + s->T[i][j+1][k] - 2*s->T[i][j][k]) +
+                            Cz*(s->T[i][j][k-1] + s->T[i][j][k+1] - 2*s->T[i][j][k]);
         }
       }
 }
 
-void set_constant_boundary(const prefs3D *p, double ***T,
-                           long nrl, long nrh, long ncl, long nch, long ndl, long ndh)
+void set_constant_boundary(const prefs3D *p, temp3D *t)
 {
   // first row
-  for (int j = ncl; j <= nch; j++)
-    for (int k = ndl; k <= ndh; k++)
-      T[nrl][j][k] = p->boundary;
+  for (int j = t->ncl; j <= t->nch; j++)
+    for (int k = t->ndl; k <= t->ndh; k++)
+      t->T[t->nrl][j][k] = p->boundary;
   // middle rows
-  for (int i = nrl+1; i < nrh; i++)
+  for (int i = t->nrl+1; i <= t->nrh-1; i++)
   {
     // first column, then middle columns, than last column
-    for (int k = ndl; k <= ndh; k++) T[i][ncl][k] = p->boundary;
-    for (int j = ncl+1; j < nch; j++) T[i][j][ndl] = T[i][j][ndh] = p->boundary;
-    for (int k = ndl; k <= ndh; k++) T[i][nch][k] = p->boundary;
+    for (int k = t->ndl; k <= t->ndh; k++) t->T[i][t->ncl][k] = p->boundary;
+    for (int j = t->ncl+1; j <= t->nch-1; j++) t->T[i][j][t->ndl] = t->T[i][j][t->ndh] = p->boundary;
+    for (int k = t->ndl; k <= t->ndh; k++) t->T[i][t->nch][k] = p->boundary;
   }
   // last row
-  for (int j = ncl; j <= nch; j++)
-    for (int k = ndl; k <= ndh; k++)
-      T[nrh][j][k] = p->boundary;
+  for (int j = t->ncl; j <= t->nch; j++)
+    for (int k = t->ndl; k <= t->ndh; k++)
+      t->T[t->nrh][j][k] = p->boundary;
 }
 
-void set_initial_with_noise(const prefs3D *p, double ***T,
-                            long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
+void set_initial_with_noise(const prefs3D *p, temp3D *t,
                             double *x, double *y, double *z,
                             double(*init)(double,double,double))
 {
   // if the initial number is I, the result will be between (1-noise)*I and (1+noise)*I
   double A = 1 - p->noise;
   double B = 2*p->noise/RAND_MAX;
-  if (!p->periodic) { nrl++; nrh--; ncl++; nch--; ndl++; ndh--; }
-  for (int i = nrl; i <= nrh; i++)
-    for (int j = ncl; j <= nch; j++)
-      for (int k = ndl; k <= ndh; k++)
-        T[i][j][k] = init(x[i], y[j], z[k])*(A + B*rand());
+  long rl = t->nrl, rh = t->nrh, cl = t->ncl, ch = t->nch, dl = t->ndl, dh = t->ndh;
+  if (!p->periodic) { rl++; rh--; cl++; ch--; dl++; dh--; }
+  for (int i = rl; i <= rh; i++)
+    for (int j = cl; j <= ch; j++)
+      for (int k = dl; k <= dh; k++)
+        t->T[i][j][k] = init(x[i], y[j], z[k])*(A + B*rand());
 }
 
 double gauss3(double x, double y, double z)

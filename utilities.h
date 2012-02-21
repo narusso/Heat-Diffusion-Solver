@@ -13,4 +13,13 @@ void copy_dmatrix(double **dst, double **src, long nrl, long nrh, long ncl, long
 void show_d3tensor(const char* s, double ***T, long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
 void copy_d3tensor(double ***dst, double ***src, long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
 
+// 3D array and bounds
+typedef struct {
+  double ***T;
+  long nrl, nrh, ncl, nch, ndl, ndh;
+} temp3D;
+
+temp3D *create_temp3D(long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
+void free_temp3D(temp3D *t);
+
 #endif
