@@ -23,7 +23,7 @@ typedef struct {
 
 void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int pause,
            double Cx, double Cy, double Cz,
-           double(*f)(double,double,double), double noise, double boundary, enum nummethod);
+           double(*f)(double,double,double), double noise, double boundary);
 void ftcs(const prefs3D *p, double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double Cx, double Cy, double Cz);

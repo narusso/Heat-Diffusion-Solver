@@ -25,7 +25,7 @@ void reset(int s)
 
 void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int pause,
            double Cx, double Cy, double Cz,
-           double(*init)(double,double,double), double noise, double boundary, enum nummethod method)
+           double(*init)(double,double,double), double noise, double boundary)
 {
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
@@ -67,12 +67,12 @@ void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int
     if (p->method == FTCS)
     {
       ftcs(p, Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, Cx, Cy, Cz);
-    } else if (method == BE)
+    } else if (p->method == BE)
     {
       copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
       becs(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A);
     }
-    else if (method == CN)
+    else if (p->method == CN)
     {
       copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
       cn(p, Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A, Cx, Cy, Cz);
