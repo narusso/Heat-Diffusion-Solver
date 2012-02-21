@@ -48,8 +48,8 @@ void solve(const prefs3D *p,
   T      = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
   Tnew   = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
 
-  set_initial_with_noise(p, T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init);
   if (!p->periodic) set_constant_boundary(p, T, 1, Xdim, 1, Ydim, 1, Zdim);
+  set_initial_with_noise(p, T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init);
 
   show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
   usleep(p->pause*2);
@@ -285,7 +285,7 @@ void set_initial_with_noise(const prefs3D *p, double ***T,
   // if the initial number is I, the result will be between (1-noise)*I and (1+noise)*I
   double A = 1 - p->noise;
   double B = 2*p->noise/RAND_MAX;
-  if (p->periodic) { nrl++; nrh--; ncl++; nch--; ndl++; ndh--; }
+  if (!p->periodic) { nrl++; nrh--; ncl++; nch--; ndl++; ndh--; }
   for (int i = nrl; i <= nrh; i++)
     for (int j = ncl; j <= nch; j++)
       for (int k = ndl; k <= ndh; k++)
