@@ -45,9 +45,6 @@ These features were not attempted:
 
 todo:
 
-set_initial_with_noise shouldn't mess with boundary cells unless we're using
-periodic boundary conditions.
-
 separate files for direct and iterative matrix solvers?
 
 ftcs could be separated from be and cn as explicit vs. implicit

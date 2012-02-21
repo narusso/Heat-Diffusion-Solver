@@ -48,7 +48,7 @@ void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
   T      = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
   Tnew   = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
 
-  set_initial_with_noise(T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init, max);
+  set_initial_with_noise(T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init, max, periodic);
   if (!periodic) set_constant_boundary(T, 1, Xdim, 1, Ydim, 1, Zdim, boundary);
 
   show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
@@ -281,11 +281,12 @@ void set_constant_boundary(double ***T,
 void set_initial_with_noise(double ***T,
                             long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
                             double *x, double *y, double *z,
-                            double(*init)(double,double,double), double max)
+                            double(*init)(double,double,double), double max, bool periodic)
 {
   // if the initial number is I, the result will be between (1-max)*I and (1+max)*I
   double A = 1 - max;
   double B = 2*max/RAND_MAX;
+  if (periodic) { nrl++; nrh--; ncl++; nch--; ndl++; ndh--; }
   for (int i = nrl; i <= nrh; i++)
     for (int j = ncl; j <= nch; j++)
       for (int k = ndl; k <= ndh; k++)

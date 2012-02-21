@@ -25,7 +25,7 @@ void set_constant_boundary(double ***T,
 void set_initial_with_noise(double ***T,
                             long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
                             double *x, double *y, double *z,
-                            double(*f)(double,double,double), double max);
+                            double(*f)(double,double,double), double max, bool periodic);
 double gauss3(double x, double y, double z);
 
 #endif
