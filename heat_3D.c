@@ -163,7 +163,7 @@ void cn(const prefs3D *p, t3D *d, t3D *s,
   long X = s->nrh-s->nrl+1; // include boundaries
   long Y = s->nch-s->ncl+1;
   long Z = s->ndh-s->ndl+1;
-  double *x = dvector(1, X*Y*Z);
+  t3D *x = create_t3D(1, X, 1, Y, 1, Z);
   t3D *b = create_t3D(1, X, 1, Y, 1, Z);
   // flatten src into b
   for (int i = s->nrl; i <= s->nrh; i++)
@@ -190,15 +190,13 @@ void cn(const prefs3D *p, t3D *d, t3D *s,
           *B += (k==s->ndh) ? 0 : Cz*s->T[i][j][k+1];
         }
       }
-  // solve Ax=b for x, using elimination
-  gaussian_elimination(A, x, (double *) b->T[1][1], X*Y*Z); // b must be a 1-based 1D vector
+  // solve Ax=b for x, using elimination (which expects 1-based 1D vectors)
+  gaussian_elimination(A, (double *) x->T[1][1], (double *) b->T[1][1], X*Y*Z);
   
   // unflatten x into dst 
-  for (int i = d->nrl; i <= d->nrh; i++)
-    for (int j = d->ncl; j <= d->nch; j++)
-      for (int k = d->ndl; k <= d->ndh; k++)
-        d->T[i][j][k] = x[1+((i-d->nrl)*Y+(j-d->ncl))*Z+(k-d->ndl)];
-  free_dvector(x, 1, X*Y*Z);
+  copy_t3D(d, x);
+
+  free_t3D(x);
   free_t3D(b);
 }
 
@@ -208,25 +206,19 @@ void becs(t3D *d, t3D *s,
   long X = s->nrh-s->nrl+1; // include boundaries
   long Y = s->nch-s->ncl+1;
   long Z = s->ndh-s->ndl+1;
-  double *x = dvector(1, X*Y*Z);
-  double *b = dvector(1, X*Y*Z);
+  t3D *x = create_t3D(1, X, 1, Y, 1, Z);
+  t3D *b = create_t3D(1, X, 1, Y, 1, Z);
   // flatten src into b
-  for (int i = s->nrl; i <= s->nrh; i++)
-    for (int j = s->ncl; j <= s->nch; j++)
-      for (int k = s->ndl; k <= s->ndh; k++)
-        b[1+((i-s->nrl)*Y+(j-s->ncl))*Z+(k-s->ndl)] = s->T[i][j][k];
+  copy_t3D(b, s);
 
-  // solve Ax=b for x, using elimination
-  gaussian_elimination(A, x, b, X*Y*Z);
+  // solve Ax=b for x, using elimination (which expects 1-based 1D vectors)
+  gaussian_elimination(A, (double *) x->T[1][1], (double *) b->T[1][1], X*Y*Z);
 
   // unflatten x into dst 
-  for (int i = d->nrl; i <= d->nrh; i++)
-    for (int j = d->ncl; j <= d->nch; j++)
-      for (int k = d->ndl; k <= d->ndh; k++)
-        d->T[i][j][k] = x[1+((i-d->nrl)*Y+(j-d->ncl))*Z+(k-d->ndl)];
+  copy_t3D(d, x);
 
-  free_dvector(x, 1, X*Y*Z);
-  free_dvector(b, 1, X*Y*Z);
+  free_t3D(x);
+  free_t3D(b);
 }
 
 void ftcs(const prefs3D *p, t3D *d, t3D *s,

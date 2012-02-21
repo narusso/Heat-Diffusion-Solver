@@ -49,14 +49,6 @@ separate files for direct and iterative matrix solvers?
 
 ftcs could be separated from be and cn as explicit vs. implicit
 
-flatten can be instant, but only if I'm using the full size of the matrices first n-1 dimensions
-I can test this by checking if &A[nrl][nch+1] == &A[nrl+1][ncl]
-but why bother? I can't remove code if I have to accomodate both options 
-
-Perhaps when I create my own "vectors", b and x, I could really make matrices, and since I
-know I'm using (1,X,1,Y,1,Z), at least the indexing while populating b can be more natural.
-For x, I really have to put it back into dst, which may or may not be full sized.
-
 use struct for other collections of parameters?
 
 1 to m for populating A is strange. for loops with i, j, k would be much easier to read.
