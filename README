@@ -57,7 +57,6 @@ Perhaps when I create my own "vectors", b and x, I could really make matrices, a
 know I'm using (1,X,1,Y,1,Z), at least the indexing while populating b can be more natural.
 For x, I really have to put it back into dst, which may or may not be full sized.
 
-use a struct for T and its dimensions
 use struct for other collections of parameters?
 
 1 to m for populating A is strange. for loops with i, j, k would be much easier to read.
