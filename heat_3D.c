@@ -35,18 +35,18 @@ void solve(const prefs3D *p,
 
   double *x, *y, *z;
   double **A, **constA;   // in case we use BE or CN
-  int Xdim = p->nx+2;
-  int Ydim = p->ny+2;
-  int Zdim = p->nz+2;
-  x = dvector(1, Xdim);
-  y = dvector(1, Ydim);
-  z = dvector(1, Zdim);
-  for (int i = 1; i <= Xdim; i++) x[i] = (i-1) / (double) (p->nx+1);
-  for (int j = 1; j <= Ydim; j++) y[j] = (j-1) / (double) (p->ny+1);
-  for (int k = 1; k <= Zdim; k++) z[k] = (k-1) / (double) (p->nz+1);
+  int X = p->nx+2;
+  int Y = p->ny+2;
+  int Z = p->nz+2;
+  x = dvector(1, X);
+  y = dvector(1, Y);
+  z = dvector(1, Z);
+  for (int i = 1; i <= X; i++) x[i] = (i-1) / (double) (p->nx+1);
+  for (int j = 1; j <= Y; j++) y[j] = (j-1) / (double) (p->ny+1);
+  for (int k = 1; k <= Z; k++) z[k] = (k-1) / (double) (p->nz+1);
 
-  temp3D *t = create_temp3D(1, Xdim, 1, Ydim, 1, Zdim);
-  temp3D *tnew = create_temp3D(1, Xdim, 1, Ydim, 1, Zdim);
+  temp3D *t = create_temp3D(1, X, 1, Y, 1, Z);
+  temp3D *tnew = create_temp3D(1, X, 1, Y, 1, Z);
   
   if (!p->periodic) set_constant_boundary(p, t);
   set_initial_with_noise(p, t, x, y, z, init);
@@ -56,10 +56,10 @@ void solve(const prefs3D *p,
 
   if (p->method == BE || p->method == CN)
   {
-    A = dmatrix(1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
-    constA = dmatrix(1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
+    A = dmatrix(1, X*Y*Z, 1, X*Y*Z);
+    constA = dmatrix(1, X*Y*Z, 1, X*Y*Z);
     if (p->method == CN) { Cx /= 2; Cy /= 2; Cz /= 2; }
-    populate_becs_matrix(p, constA, Xdim, Ydim, Zdim, Cx, Cy, Cz); // build it once
+    populate_becs_matrix(p, constA, X, Y, Z, Cx, Cy, Cz); // build it once
   }
 
   for (int n=1; n <= p->nsteps; n++)        // repeat the loop nsteps times
@@ -69,12 +69,12 @@ void solve(const prefs3D *p,
       ftcs(p, tnew, t, Cx, Cy, Cz);
     } else if (p->method == BE)
     {
-      copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
+      copy_dmatrix(A, constA, 1, X*Y*Z, 1, X*Y*Z); // copy it every time :(
       becs(tnew, t, A);
     }
     else if (p->method == CN)
     {
-      copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
+      copy_dmatrix(A, constA, 1, X*Y*Z, 1, X*Y*Z); // copy it every time :(
       cn(p, tnew, t, A, Cx, Cy, Cz);
     }
 
@@ -88,58 +88,58 @@ void solve(const prefs3D *p,
     }
   }
 
-  free_dvector(x, 1, Xdim);
-  free_dvector(y, 1, Ydim);
-  free_dvector(z, 1, Zdim);
+  free_dvector(x, 1, X);
+  free_dvector(y, 1, Y);
+  free_dvector(z, 1, Z);
   if (p->method == BE || p->method == CN)
   {
-    free_dmatrix(A, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
-    free_dmatrix(constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
+    free_dmatrix(A, 1, X*Y*Z, 1, X*Y*Z);
+    free_dmatrix(constA, 1, X*Y*Z, 1, X*Y*Z);
   }
   free_temp3D(t);
   free_temp3D(tnew);
   screen("\033[?25h"); // show cursor$
 }
 
-void populate_becs_matrix(const prefs3D *p, double **A, long Xdim, long Ydim, long Zdim, 
+void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z, 
                           double Cx, double Cy, double Cz)
 {
   // Prepare matrix A from the the Backward Euler discretization using the Cx, Cy, Cz values
 
   // malloc doesn't guarentee zeroed memory so we zero it out first
-  for (int i = 1; i <= Xdim*Ydim*Zdim; i++)
-    for (int j = 1; j <= Xdim*Ydim*Zdim; j++)
+  for (int i = 1; i <= X*Y*Z; i++)
+    for (int j = 1; j <= X*Y*Z; j++)
       A[i][j] = 0;
   if (p->periodic)
   {
-    for (int m = 1; m <= Xdim*Ydim*Zdim; m++)
+    for (int m = 1; m <= X*Y*Z; m++)
     {
       // Fill main diagonal
       A[m][m] = 2*(Cx+Cy+Cz)+1;
       int left, right;
   
       // Fill off diagonals
-      left  = ((m-1)%Zdim == 0)      ? m+Zdim-1 : m-1;
-      right = ((m-1)%Zdim == Zdim-1) ? m-Zdim+1 : m+1;
+      left  = ((m-1)%Z == 0)   ? m+Z-1 : m-1;
+      right = ((m-1)%Z == Z-1) ? m-Z+1 : m+1;
       A[m][left] = A[m][right] = -Cz;
   
       // Fill near bands
-      left  = (((m-1)/Zdim)%Ydim == 0)      ? m+Zdim*(Ydim-1) : m-Zdim;
-      right = (((m-1)/Zdim)%Ydim == Ydim-1) ? m-Zdim*(Ydim-1) : m+Zdim;
+      left  = (((m-1)/Z)%Y == 0)   ? m+Z*(Y-1) : m-Z;
+      right = (((m-1)/Z)%Y == Y-1) ? m-Z*(Y-1) : m+Z;
       A[m][left] = A[m][right] = -Cy;
   
       // Fill far bands
-      left  = (((m-1)/(Zdim*Ydim)%Xdim) == 0)      ? m+Zdim*Ydim*(Xdim-1) : m-Zdim*Ydim;
-      right = (((m-1)/(Zdim*Ydim)%Xdim) == Xdim-1) ? m-Zdim*Ydim*(Xdim-1) : m+Zdim*Ydim;
+      left  = (((m-1)/(Z*Y)%X) == 0)   ? m+Z*Y*(X-1) : m-Z*Y;
+      right = (((m-1)/(Z*Y)%X) == X-1) ? m-Z*Y*(X-1) : m+Z*Y;
       A[m][left] = A[m][right] = -Cx;
     }
   } else { // constant boundary
-    for (int m = 1; m <= Xdim*Ydim*Zdim; m++)
+    for (int m = 1; m <= X*Y*Z; m++)
     {
       // if m is on any boundary, set diagonal to 1 and continue
-      if ((m-1)%Zdim == 0 || (m-1)%Zdim == Zdim-1 ||
-          ((m-1)/Zdim)%Ydim == 0 || ((m-1)/Zdim)%Ydim == Ydim-1 ||
-          ((m-1)/(Zdim*Ydim)%Xdim) == 0 || ((m-1)/(Zdim*Ydim)%Xdim) == Xdim-1)
+      if ((m-1)%Z == 0 || (m-1)%Z == Z-1 ||
+          ((m-1)/Z)%Y == 0 || ((m-1)/Z)%Y == Y-1 ||
+          ((m-1)/(Z*Y)%X) == 0 || ((m-1)/(Z*Y)%X) == X-1)
       {
         A[m][m] = 1;
         continue;
@@ -149,12 +149,12 @@ void populate_becs_matrix(const prefs3D *p, double **A, long Xdim, long Ydim, lo
       // Fill off diagonals
       A[m][m-1] = A[m][m+1] = -Cz;
       // Fill near bands
-      A[m][m-Zdim] = A[m][m+Zdim] = -Cy;
+      A[m][m-Z] = A[m][m+Z] = -Cy;
       // Fill far bands
-      A[m][m-Zdim*Ydim] = A[m][m+Zdim*Ydim] = -Cx;
+      A[m][m-Z*Y] = A[m][m+Z*Y] = -Cx;
     }
   }
-  // show_dmatrix("A", A, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
+  // show_dmatrix("A", A, 1, X*Y*Z, 1, X*Y*Z);
 }
 
 void cn(const prefs3D *p, temp3D *d, temp3D *s,
