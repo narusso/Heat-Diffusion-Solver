@@ -12,22 +12,23 @@ void usage(char *name);
 
 int main(int argc, char *argv[])
 {
-  double LX, LY, LZ, alpha, dx, dy, dz, dt, Cx, Cy, Cz, noise, boundary;
-  int nx, ny, nz, nsteps, sample, pause;
-  enum nummethod method = BE;
-  bool periodic;
+  // parameters
+  prefs3D ps, *p; p = &ps;
+  // parameters not directly used by solver
+  double LX, LY, LZ, alpha, dt;
 
-  // Default values
+  // default parameter values
+  p->nx = p->ny = p->nz = 3;             // number of divisions along each axis
+  p->nsteps = 6;                         // number of time steps
+  p->sample = 2;                         // how often to show output
+  p->pause  = 10000;                     // how long to pause after showing output
+  p->noise  = 0.2;                       // max noise to add/subtract from initial values
+  p->boundary = 0;                       // constant boundary condition
+  p->periodic = false;                   // periodic boundary condition
+  p->method = BE;
   LX = LY = LZ = 1;                      // length of 1D object in m along each axis
-  nx = ny = nz = 3;                      // number of divisions along each axis
-  nsteps = 6;                            // number of time steps
-  sample = 2;                            // how often to show output
-  pause  = 10000;                        // how long to pause after showing output
   alpha  = 1.1234e-4;                    // diffusivity of copper in m^2/s
   dt     = .003;                         // length of one time step in seconds
-  noise  = 0.2;                          // max noise to add/subtract from initial values
-  boundary = 0;                          // constant boundary condition
-  periodic = false;                      // periodic boundary condition
 
   int opt;
   while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:")) != -1)
@@ -36,23 +37,23 @@ int main(int argc, char *argv[])
       case 'X': LX = atof(optarg); break;
       case 'Y': LY = atof(optarg); break;
       case 'Z': LZ = atof(optarg); break;
-      case 'x': nx = atoi(optarg); break;
-      case 'y': ny = atoi(optarg); break;
-      case 'z': nz = atoi(optarg); break;
-      case 'n': nsteps = atoi(optarg); break;
-      case 's': sample = atoi(optarg); break;
-      case 'p': pause = atof(optarg)*1000*1000; break;
+      case 'x': p->nx = atoi(optarg); break;
+      case 'y': p->ny = atoi(optarg); break;
+      case 'z': p->nz = atoi(optarg); break;
+      case 'n': p->nsteps = atoi(optarg); break;
+      case 's': p->sample = atoi(optarg); break;
+      case 'p': p->pause = atof(optarg)*1000*1000; break;
       case 'a': alpha = atof(optarg); break;
       case 't': dt = atof(optarg); break;
-      case 'r': noise = atof(optarg); break;
+      case 'r': p->noise = atof(optarg); break;
       case 'b':
-        if (strcmp(optarg, "p") == 0) periodic = true;
-        else boundary = atof(optarg);
+        if (strcmp(optarg, "p") == 0) p->periodic = true;
+        else p->boundary = atof(optarg);
         break;
       case 'm':
-        if (strcmp(optarg, "FTCS") == 0) { method = FTCS; break; }
-        else if (strcmp(optarg, "BE") == 0) { method = BE; break; }
-        else if (strcmp(optarg, "CN") == 0) { method = CN; break; }
+        if (strcmp(optarg, "FTCS") == 0) { p->method = FTCS; break; }
+        else if (strcmp(optarg, "BE") == 0) { p->method = BE; break; }
+        else if (strcmp(optarg, "CN") == 0) { p->method = CN; break; }
       default:
         usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -61,17 +62,19 @@ int main(int argc, char *argv[])
 
   // sanity checks
   assert(LX > 0); assert(LY > 0); assert(LZ > 0);
-  assert(nx > 0); assert(ny > 0); assert(nz > 0);
-  assert(sample > 0); assert(alpha > 0);
+  assert(p->nx > 0); assert(p->ny > 0); assert(p->nz > 0);
+  assert(p->sample > 0); assert(alpha > 0); assert(p->pause > 0);
   assert(dt > 0); 
 
-  dx = LX/nx; dy = LY/ny; dz = LZ/nz;    // length of one segment in m along z axis
+  // derived constants
+  double dx, dy, dz, Cx, Cy, Cz;
+  dx = LX/p->nx; dy = LY/p->ny; dz = LZ/p->nz;
   Cx = alpha*dt/(dx*dx);
   Cy = alpha*dt/(dy*dy);
   Cz = alpha*dt/(dz*dz);
 
   srand(getpid()*time(NULL));
-  solve(NULL, nx, ny, nz, nsteps, sample, pause, Cx, Cy, Cz, gauss3, noise, boundary, periodic, method);
+  solve(p, p->nx, p->ny, p->nz, p->nsteps, p->sample, p->pause, Cx, Cy, Cz, gauss3, p->noise, p->boundary, p->periodic, p->method);
   exit(EXIT_SUCCESS);
 }
 
