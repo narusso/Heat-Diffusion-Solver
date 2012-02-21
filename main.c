@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 {
   double LX, LY, LZ, alpha, dx, dy, dz, dt, Cx, Cy, Cz, noise, boundary;
   int nx, ny, nz, nsteps, sample, pause;
-  enum method meth = BE;
+  enum nummethod method = BE;
   bool periodic;
 
   // Default values
@@ -50,9 +50,9 @@ int main(int argc, char *argv[])
         else boundary = atof(optarg);
         break;
       case 'm':
-        if (strcmp(optarg, "FTCS") == 0) { meth = FTCS; break; }
-        else if (strcmp(optarg, "BE") == 0) { meth = BE; break; }
-        else if (strcmp(optarg, "CN") == 0) { meth = CN; break; }
+        if (strcmp(optarg, "FTCS") == 0) { method = FTCS; break; }
+        else if (strcmp(optarg, "BE") == 0) { method = BE; break; }
+        else if (strcmp(optarg, "CN") == 0) { method = CN; break; }
       default:
         usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
   Cz = alpha*dt/(dz*dz);
 
   srand(getpid()*time(NULL));
-  solve(nx, ny, nz, nsteps, sample, pause, Cx, Cy, Cz, gauss3, noise, boundary, periodic, meth);
+  solve(nx, ny, nz, nsteps, sample, pause, Cx, Cy, Cz, gauss3, noise, boundary, periodic, method);
   exit(EXIT_SUCCESS);
 }
 

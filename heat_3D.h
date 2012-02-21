@@ -3,11 +3,27 @@
 
 #include <stdbool.h>
 
-enum method { FTCS, BE, CN };
+enum nummethod { FTCS, BE, CN };
+
+// 3D Temp array and bounds
+typedef struct {
+  double ***T;
+  long nrl, nrh, ncl, nch, ndl, ndh;
+} temp3D;
+
+// 3D solver prefernces
+typedef struct {
+  int nx, ny, nz;
+  int nsteps, sample, pause;
+  double max, boundary;
+  bool periodic;
+  enum nummethod method;
+} prefs;
+
 
 void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
            double Cx, double Cy, double Cz,
-           double(*f)(double,double,double), double max, double boundary, bool periodic, enum method);
+           double(*f)(double,double,double), double max, double boundary, bool periodic, enum nummethod);
 void ftcs(double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double Cx, double Cy, double Cz, bool periodic);

@@ -9,7 +9,7 @@
 #include <unistd.h> // usleep
 #include <stdlib.h> // exit
 
-const char *methods[] = {
+const char *methodnames[] = {
  [FTCS] = "Forward-Time Center-Space",
    [BE] = "Backward Euler",
    [CN] = "Crank-Nicolson",
@@ -25,7 +25,7 @@ void reset(int s)
 
 void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
            double Cx, double Cy, double Cz,
-           double(*init)(double,double,double), double max, double boundary, bool periodic, enum method m)
+           double(*init)(double,double,double), double max, double boundary, bool periodic, enum nummethod method)
 {
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
@@ -54,25 +54,25 @@ void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
   show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
   usleep(pause*2);
 
-  if (m == BE || m == CN)
+  if (method == BE || method == CN)
   {
     A = dmatrix(1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
     constA = dmatrix(1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
-    if (m == CN) { Cx /= 2; Cy /= 2; Cz /= 2; }
+    if (method == CN) { Cx /= 2; Cy /= 2; Cz /= 2; }
     populate_becs_matrix(constA, Xdim, Ydim, Zdim, Cx, Cy, Cz, periodic); // build it once
   }
 
   for (int n=1; n <= nsteps; n++)        // repeat the loop nsteps times
   {
-    if (m == FTCS)
+    if (method == FTCS)
     {
       ftcs(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, Cx, Cy, Cz, periodic);
-    } else if (m == BE)
+    } else if (method == BE)
     {
       copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
       becs(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A, periodic);
     }
-    else if (m == CN)
+    else if (method == CN)
     {
       copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
       cn(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A, Cx, Cy, Cz, periodic);
@@ -82,7 +82,7 @@ void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
 
     if (n%sample == 0)
     {
-      printf("%s %d\n", methods[m], n);
+      printf("%s %d\n", methodnames[method], n);
       show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
       usleep(pause);
     }
@@ -91,7 +91,7 @@ void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
   free_dvector(x, 1, Xdim);
   free_dvector(y, 1, Ydim);
   free_dvector(z, 1, Zdim);
-  if (m == BE || m == CN)
+  if (method == BE || method == CN)
   {
     free_dmatrix(A, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
     free_dmatrix(constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
