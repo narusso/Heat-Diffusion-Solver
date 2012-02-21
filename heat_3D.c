@@ -51,7 +51,7 @@ void solve(const prefs3D *p,
   if (!p->periodic) set_constant_boundary(p, t);
   set_initial_with_noise(p, t, x, y, z, init);
 
-  show_d3tensor("T", t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
+  show_temp3D("T", t);
   usleep(p->pause*2);
 
   if (p->method == BE || p->method == CN)
@@ -78,12 +78,12 @@ void solve(const prefs3D *p,
       cn(p, tnew, t, A, Cx, Cy, Cz);
     }
 
-    copy_d3tensor(t->T, tnew->T, tnew->nrl, tnew->nrh, tnew->ncl, tnew->nch, tnew->ndl, tnew->ndh); // update T to the new values
+    copy_temp3D(t, tnew);
 
     if (n%p->sample == 0)
     {
       printf("%s %d\n", methodnames[p->method], n);
-      show_d3tensor("T", t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
+      show_temp3D("T", t);
       usleep(p->pause);
     }
   }
