@@ -78,11 +78,11 @@ void show_scalar(double x)
   if (x == 0) printf("\033[m");
 }
 
-temp3D *create_temp3D(long nrl, long nrh, long ncl, long nch, long ndl, long ndh)
+t3D *create_t3D(long nrl, long nrh, long ncl, long nch, long ndl, long ndh)
 {
-  temp3D *t;
-  t = (temp3D *) malloc((size_t) sizeof(temp3D));
-  if (!t) nrerror("allocation failure in create_temp3D()");
+  t3D *t;
+  t = (t3D *) malloc((size_t) sizeof(t3D));
+  if (!t) nrerror("allocation failure in create_t3D()");
   t->T = d3tensor(nrl, nrh, ncl, nch, ndl, ndh);
   t->nrl = nrl; t->nrh = nrh;
   t->ncl = ncl; t->nch = nch;
@@ -90,7 +90,7 @@ temp3D *create_temp3D(long nrl, long nrh, long ncl, long nch, long ndl, long ndh
   return t;
 }
 
-void copy_temp3D(temp3D *d, const temp3D *s)
+void copy_t3D(t3D *d, const t3D *s)
 {
   assert(d->nrh - d->nrl == s->nrh - s->nrl);
   assert(d->nch - d->ncl == s->nch - s->ncl);
@@ -99,12 +99,12 @@ void copy_temp3D(temp3D *d, const temp3D *s)
                 s->T, s->nrl, s->nrh, s->ncl, s->nch, s->ndl, s->ndh);
 }
 
-void show_temp3D(const char *s, const temp3D *t)
+void show_t3D(const char *s, const t3D *t)
 {
   show_d3tensor(s, t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
 }
 
-void free_temp3D(temp3D *t)
+void free_t3D(t3D *t)
 {
   free_d3tensor(t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
   t->T = NULL;

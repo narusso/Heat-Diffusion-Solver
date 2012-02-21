@@ -45,13 +45,13 @@ void solve(const prefs3D *p,
   for (int j = 1; j <= Y; j++) y[j] = (j-1) / (double) (p->ny+1);
   for (int k = 1; k <= Z; k++) z[k] = (k-1) / (double) (p->nz+1);
 
-  temp3D *t = create_temp3D(1, X, 1, Y, 1, Z);
-  temp3D *tnew = create_temp3D(1, X, 1, Y, 1, Z);
+  t3D *t = create_t3D(1, X, 1, Y, 1, Z);
+  t3D *tnew = create_t3D(1, X, 1, Y, 1, Z);
   
   if (!p->periodic) set_constant_boundary(p, t);
   set_initial_with_noise(p, t, x, y, z, init);
 
-  show_temp3D("T", t);
+  show_t3D("T", t);
   usleep(p->pause*2);
 
   if (p->method == BE || p->method == CN)
@@ -78,12 +78,12 @@ void solve(const prefs3D *p,
       cn(p, tnew, t, A, Cx, Cy, Cz);
     }
 
-    copy_temp3D(t, tnew);
+    copy_t3D(t, tnew);
 
     if (n%p->sample == 0)
     {
       printf("%s %d\n", methodnames[p->method], n);
-      show_temp3D("T", t);
+      show_t3D("T", t);
       usleep(p->pause);
     }
   }
@@ -96,8 +96,8 @@ void solve(const prefs3D *p,
     free_dmatrix(A, 1, X*Y*Z, 1, X*Y*Z);
     free_dmatrix(constA, 1, X*Y*Z, 1, X*Y*Z);
   }
-  free_temp3D(t);
-  free_temp3D(tnew);
+  free_t3D(t);
+  free_t3D(tnew);
   screen("\033[?25h"); // show cursor$
 }
 
@@ -157,14 +157,14 @@ void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
   // show_dmatrix("A", A, 1, X*Y*Z, 1, X*Y*Z);
 }
 
-void cn(const prefs3D *p, temp3D *d, temp3D *s,
+void cn(const prefs3D *p, t3D *d, t3D *s,
           double **A, double Cx, double Cy, double Cz)
 {
   long X = s->nrh-s->nrl+1; // include boundaries
   long Y = s->nch-s->ncl+1;
   long Z = s->ndh-s->ndl+1;
   double *x = dvector(1, X*Y*Z);
-  temp3D *b = create_temp3D(1, X, 1, Y, 1, Z);
+  t3D *b = create_t3D(1, X, 1, Y, 1, Z);
   // flatten src into b
   for (int i = s->nrl; i <= s->nrh; i++)
     for (int j = s->ncl; j <= s->nch; j++)
@@ -199,10 +199,10 @@ void cn(const prefs3D *p, temp3D *d, temp3D *s,
       for (int k = d->ndl; k <= d->ndh; k++)
         d->T[i][j][k] = x[1+((i-d->nrl)*Y+(j-d->ncl))*Z+(k-d->ndl)];
   free_dvector(x, 1, X*Y*Z);
-  free_temp3D(b);
+  free_t3D(b);
 }
 
-void becs(temp3D *d, temp3D *s,
+void becs(t3D *d, t3D *s,
           double **A)
 {
   long X = s->nrh-s->nrl+1; // include boundaries
@@ -229,7 +229,7 @@ void becs(temp3D *d, temp3D *s,
   free_dvector(b, 1, X*Y*Z);
 }
 
-void ftcs(const prefs3D *p, temp3D *d, temp3D *s,
+void ftcs(const prefs3D *p, t3D *d, t3D *s,
           double Cx, double Cy, double Cz)
 {
   for (int i = s->nrl; i <= s->nrh; i++)            // calculate new values for all cells
@@ -253,7 +253,7 @@ void ftcs(const prefs3D *p, temp3D *d, temp3D *s,
       }
 }
 
-void set_constant_boundary(const prefs3D *p, temp3D *t)
+void set_constant_boundary(const prefs3D *p, t3D *t)
 {
   // first row
   for (int j = t->ncl; j <= t->nch; j++)
@@ -273,7 +273,7 @@ void set_constant_boundary(const prefs3D *p, temp3D *t)
       t->T[t->nrh][j][k] = p->boundary;
 }
 
-void set_initial_with_noise(const prefs3D *p, temp3D *t,
+void set_initial_with_noise(const prefs3D *p, t3D *t,
                             double *x, double *y, double *z,
                             double(*init)(double,double,double))
 {
