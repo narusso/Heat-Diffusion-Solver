@@ -23,7 +23,7 @@ void reset(int s)
     exit(EXIT_FAILURE);
 }
 
-void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int pause,
+void solve(const prefs3D *p,
            double Cx, double Cy, double Cz,
            double(*init)(double,double,double))
 {

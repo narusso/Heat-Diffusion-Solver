@@ -21,7 +21,7 @@ typedef struct {
 } prefs3D;
 
 
-void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int pause,
+void solve(const prefs3D *p,
            double Cx, double Cy, double Cz,
            double(*f)(double,double,double));
 void ftcs(const prefs3D *p, double ***dst, double ***src,
