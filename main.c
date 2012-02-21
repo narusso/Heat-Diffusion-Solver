@@ -16,22 +16,23 @@ int main(int argc, char *argv[])
   prefs3D ps, *p; p = &ps;
   // parameters not directly used by solver
   double LX, LY, LZ, alpha, dt;
+  char *out_soln = NULL, *out_perf = NULL;
 
   // default parameter values
-  p->nx = p->ny = p->nz = 3;             // number of divisions along each axis
-  p->nsteps = 6;                         // number of time steps
-  p->sample = 2;                         // how often to show output
-  p->pause  = 10000;                     // how long to pause after showing output
-  p->noise  = 0.2;                       // max noise to add/subtract from initial values
-  p->boundary = 0;                       // constant boundary condition
-  p->periodic = false;                   // periodic boundary condition
-  p->method = BE;
-  LX = LY = LZ = 1;                      // length of 1D object in m along each axis
-  alpha  = 1.1234e-4;                    // diffusivity of copper in m^2/s
-  dt     = .003;                         // length of one time step in seconds
+  p->nx = p->ny = p->nz = 3;              // number of divisions along each axis
+  p->nsteps    = 6;                       // number of time steps
+  p->sample    = 2;                       // how often to show output
+  p->pause     = 10000;                   // how long to pause after showing output
+  p->noise     = 0.2;                     // max noise to add/subtract from initial values
+  p->boundary  = 0;                       // constant boundary condition
+  p->periodic  = false;                   // periodic boundary condition
+  p->method    = BE;                      // method for solving Ax=b
+  LX = LY = LZ = 1;                       // length of 1D object in m along each axis
+  alpha        = 1.1234e-4;               // diffusivity of copper in m^2/s
+  dt           = .003;                    // length of one time step in seconds
 
   int opt;
-  while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:")) != -1)
+  while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:o:O:")) != -1)
   {
     switch (opt) {
       case 'X': LX = atof(optarg); break;
@@ -54,6 +55,14 @@ int main(int argc, char *argv[])
         if (strcmp(optarg, "FTCS") == 0) { p->method = FTCS; break; }
         else if (strcmp(optarg, "BE") == 0) { p->method = BE; break; }
         else if (strcmp(optarg, "CN") == 0) { p->method = CN; break; }
+      case 'o':
+        if (strcmp(optarg, ".") == 0) out_soln = "/tmp/heat_3D_soln.dat";
+        else out_soln = optarg;
+        break;
+      case 'O':
+        if (strcmp(optarg, ".") == 0) out_perf = "/tmp/heat_3D_perf.dat";
+        else out_perf = optarg;
+        break;
       default:
         usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -87,7 +96,8 @@ void usage(char *name)
     "[-n number of time steps to calculate ]", "[-s how many time steps between reports ]",
     "[-p how long to pause reports (in seconds) ]", "[-a diffusivity constant (in m/s^2) ]",
     "[-t length of time step (in seconds) ]", "[-r ratio of noise applied to initial condition (0=none) ]",
-    "[-b value of constant boundary condition (or p for periodic) ]", "[-m method to use (FTCS, BE, or CN) ]"
+    "[-b value of constant boundary condition (or p for periodic) ]", "[-m method to use (FTCS, BE, or CN) ]",
+    "[-o filename for plottable solution data ]", "[-O filename for plottable performance data ]",
   };
   int indentation = strlen("Usage:  ") + strlen(name);
   fprintf(stderr, "Usage: %s ", name);
@@ -97,4 +107,5 @@ void usage(char *name)
     for (int j = 0; j < indentation; j++) fprintf(stderr, " ");
     fprintf(stderr, "%s\n", option[i]);
   }
+  fprintf(stderr, "Specify . as the filename to use a default value\n");
 }
