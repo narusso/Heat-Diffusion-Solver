@@ -18,27 +18,27 @@ typedef struct {
   double max, boundary;
   bool periodic;
   enum nummethod method;
-} prefs;
+} prefs3D;
 
 
-void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
+void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int pause,
            double Cx, double Cy, double Cz,
            double(*f)(double,double,double), double max, double boundary, bool periodic, enum nummethod);
-void ftcs(double ***dst, double ***src,
+void ftcs(const prefs3D *p, double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double Cx, double Cy, double Cz, bool periodic);
-void cn(double ***dst, double ***src,
+void cn(const prefs3D *p, double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double **A, double Cx, double Cy, double Cz, bool periodic);
-void becs(double ***dst, double ***src,
+void becs(const prefs3D *p, double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double **A, bool periodic);
-void populate_becs_matrix(double **A, long Xdim, long Ydim, long Zdim,
+void populate_becs_matrix(const prefs3D *p, double **A, long Xdim, long Ydim, long Zdim,
                           double Cx, double Cy, double Cz, bool periodic);
-void set_constant_boundary(double ***T,
+void set_constant_boundary(const prefs3D *p, double ***T,
                            long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
                            double value);
-void set_initial_with_noise(double ***T,
+void set_initial_with_noise(const prefs3D *p, double ***T,
                             long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
                             double *x, double *y, double *z,
                             double(*f)(double,double,double), double max, bool periodic);

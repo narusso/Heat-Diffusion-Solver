@@ -23,7 +23,7 @@ void reset(int s)
     exit(EXIT_FAILURE);
 }
 
-void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
+void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int pause,
            double Cx, double Cy, double Cz,
            double(*init)(double,double,double), double max, double boundary, bool periodic, enum nummethod method)
 {
@@ -48,8 +48,8 @@ void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
   T      = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
   Tnew   = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
 
-  set_initial_with_noise(T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init, max, periodic);
-  if (!periodic) set_constant_boundary(T, 1, Xdim, 1, Ydim, 1, Zdim, boundary);
+  set_initial_with_noise(NULL, T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init, max, periodic);
+  if (!periodic) set_constant_boundary(NULL, T, 1, Xdim, 1, Ydim, 1, Zdim, boundary);
 
   show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
   usleep(pause*2);
@@ -59,23 +59,23 @@ void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
     A = dmatrix(1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
     constA = dmatrix(1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
     if (method == CN) { Cx /= 2; Cy /= 2; Cz /= 2; }
-    populate_becs_matrix(constA, Xdim, Ydim, Zdim, Cx, Cy, Cz, periodic); // build it once
+    populate_becs_matrix(NULL, constA, Xdim, Ydim, Zdim, Cx, Cy, Cz, periodic); // build it once
   }
 
   for (int n=1; n <= nsteps; n++)        // repeat the loop nsteps times
   {
     if (method == FTCS)
     {
-      ftcs(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, Cx, Cy, Cz, periodic);
+      ftcs(NULL, Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, Cx, Cy, Cz, periodic);
     } else if (method == BE)
     {
       copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
-      becs(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A, periodic);
+      becs(NULL, Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A, periodic);
     }
     else if (method == CN)
     {
       copy_dmatrix(A, constA, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim); // copy it every time :(
-      cn(Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A, Cx, Cy, Cz, periodic);
+      cn(NULL, Tnew, T, 1, Xdim, 1, Ydim, 1, Zdim, A, Cx, Cy, Cz, periodic);
     }
 
     copy_d3tensor(T, Tnew, 1, Xdim, 1, Ydim, 1, Zdim); // update T to the new values
@@ -101,7 +101,7 @@ void solve(int nx, int ny, int nz, int nsteps, int sample, int pause,
   screen("\033[?25h"); // show cursor$
 }
 
-void populate_becs_matrix(double **A, long Xdim, long Ydim, long Zdim, 
+void populate_becs_matrix(const prefs3D *p, double **A, long Xdim, long Ydim, long Zdim, 
                           double Cx, double Cy, double Cz, bool periodic)
 {
   // Prepare matrix A from the the Backward Euler discretization using the Cx, Cy, Cz values
@@ -157,7 +157,7 @@ void populate_becs_matrix(double **A, long Xdim, long Ydim, long Zdim,
   // show_dmatrix("A", A, 1, Xdim*Ydim*Zdim, 1, Xdim*Ydim*Zdim);
 }
 
-void cn(double ***dst, double ***src,
+void cn(const prefs3D *p, double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double **A, double Cx, double Cy, double Cz, bool periodic)
 {
@@ -203,7 +203,7 @@ void cn(double ***dst, double ***src,
   free_dvector(b, 1, X*Y*Z);
 }
 
-void becs(double ***dst, double ***src,
+void becs(const prefs3D *p, double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double **A, bool periodic)
 {
@@ -231,7 +231,7 @@ void becs(double ***dst, double ***src,
   free_dvector(b, 1, X*Y*Z);
 }
 
-void ftcs(double ***dst, double ***src,
+void ftcs(const prefs3D *p, double ***dst, double ***src,
           long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
           double Cx, double Cy, double Cz, bool periodic)
 {
@@ -256,7 +256,7 @@ void ftcs(double ***dst, double ***src,
       }
 }
 
-void set_constant_boundary(double ***T,
+void set_constant_boundary(const prefs3D *p, double ***T,
                            long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
                            double value)
 {
@@ -278,7 +278,7 @@ void set_constant_boundary(double ***T,
       T[nrh][j][k] = value;
 }
 
-void set_initial_with_noise(double ***T,
+void set_initial_with_noise(const prefs3D *p, double ***T,
                             long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
                             double *x, double *y, double *z,
                             double(*init)(double,double,double), double max, bool periodic)
