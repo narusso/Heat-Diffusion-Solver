@@ -25,7 +25,7 @@ void reset(int s)
 
 void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int pause,
            double Cx, double Cy, double Cz,
-           double(*init)(double,double,double), double max, double boundary, bool periodic, enum nummethod method)
+           double(*init)(double,double,double), double noise, double boundary, bool periodic, enum nummethod method)
 {
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
@@ -48,7 +48,7 @@ void solve(const prefs3D *p, int nx, int ny, int nz, int nsteps, int sample, int
   T      = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
   Tnew   = d3tensor(1, Xdim, 1, Ydim, 1, Zdim);
 
-  set_initial_with_noise(NULL, T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init, max, periodic);
+  set_initial_with_noise(NULL, T, 1, Xdim, 1, Ydim, 1, Zdim, x, y, z, init, noise, periodic);
   if (!periodic) set_constant_boundary(NULL, T, 1, Xdim, 1, Ydim, 1, Zdim, boundary);
 
   show_d3tensor("T", T, 1, Xdim, 1, Ydim, 1, Zdim);
@@ -281,11 +281,11 @@ void set_constant_boundary(const prefs3D *p, double ***T,
 void set_initial_with_noise(const prefs3D *p, double ***T,
                             long nrl, long nrh, long ncl, long nch, long ndl, long ndh,
                             double *x, double *y, double *z,
-                            double(*init)(double,double,double), double max, bool periodic)
+                            double(*init)(double,double,double), double noise, bool periodic)
 {
-  // if the initial number is I, the result will be between (1-max)*I and (1+max)*I
-  double A = 1 - max;
-  double B = 2*max/RAND_MAX;
+  // if the initial number is I, the result will be between (1-noise)*I and (1+noise)*I
+  double A = 1 - noise;
+  double B = 2*noise/RAND_MAX;
   if (periodic) { nrl++; nrh--; ncl++; nch--; ndl++; ndh--; }
   for (int i = nrl; i <= nrh; i++)
     for (int j = ncl; j <= nch; j++)
