@@ -16,7 +16,8 @@ int main(int argc, char *argv[])
   prefs3D ps, *p; p = &ps;
   // parameters not directly used by solver
   double LX, LY, LZ, alpha, dt;
-  char *out_soln = NULL, *out_perf = NULL;
+  char *out_soln = NULL;                  // filename for solution data
+  char *out_perf = NULL;                  // filename for performance data
 
   // default parameter values
   p->nx = p->ny = p->nz = 3;              // number of divisions along each axis
@@ -27,12 +28,15 @@ int main(int argc, char *argv[])
   p->boundary  = 0;                       // constant boundary condition
   p->periodic  = false;                   // periodic boundary condition
   p->method    = BE;                      // method for solving Ax=b
+  p->quiet     = false;                   // whether to print data to stdout
+  p->os        = NULL;                    // FILE* for solution data
+  p->op        = NULL;                    // FILE* for performance data
   LX = LY = LZ = 1;                       // length of 1D object in m along each axis
   alpha        = 1.1234e-4;               // diffusivity of copper in m^2/s
   dt           = .003;                    // length of one time step in seconds
 
   int opt;
-  while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:o:O:")) != -1)
+  while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:o:O:q")) != -1)
   {
     switch (opt) {
       case 'X': LX = atof(optarg); break;
@@ -47,6 +51,7 @@ int main(int argc, char *argv[])
       case 'a': alpha = atof(optarg); break;
       case 't': dt = atof(optarg); break;
       case 'r': p->noise = atof(optarg); break;
+      case 'q': p->quiet = true; break;
       case 'b':
         if (strcmp(optarg, "p") == 0) p->periodic = true;
         else p->boundary = atof(optarg);
@@ -72,7 +77,7 @@ int main(int argc, char *argv[])
   // sanity checks
   assert(LX > 0); assert(LY > 0); assert(LZ > 0);
   assert(p->nx > 0); assert(p->ny > 0); assert(p->nz > 0);
-  assert(p->sample > 0); assert(alpha > 0); assert(p->pause > 0);
+  assert(p->sample > 0); assert(alpha > 0); assert(p->pause >= 0);
   assert(dt > 0); 
 
   // derived constants
@@ -83,7 +88,26 @@ int main(int argc, char *argv[])
   Cz = alpha*dt/(dz*dz);
 
   srand(getpid()*time(NULL));
+  if (out_soln)
+  {
+    p->os = fopen(out_soln, "w");
+    if (p->os)
+      fprintf(stdout, "solution data goes to %s\n", out_soln);
+    else
+      fprintf(stderr, "Couldn't open %s for writing\n", out_soln);
+
+  }
+  if (out_perf)
+  {
+    p->op = fopen(out_perf, "w");
+    if (p->op)
+      fprintf(stdout, "performance data goes to %s\n", out_perf);
+    else
+      fprintf(stderr, "Couldn't open %s for writing\n", out_soln);
+  }
   solve(p, Cx, Cy, Cz, gauss3);
+  if (p->os) fclose(p->os);
+  if (p->op) fclose(p->op);
   exit(EXIT_SUCCESS);
 }
 
@@ -98,6 +122,7 @@ void usage(char *name)
     "[-t length of time step (in seconds) ]", "[-r ratio of noise applied to initial condition (0=none) ]",
     "[-b value of constant boundary condition (or p for periodic) ]", "[-m method to use (FTCS, BE, or CN) ]",
     "[-o filename for plottable solution data ]", "[-O filename for plottable performance data ]",
+    "[-q suppress normal output ]",
   };
   int indentation = strlen("Usage:  ") + strlen(name);
   fprintf(stderr, "Usage: %s ", name);

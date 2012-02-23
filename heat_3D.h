@@ -2,6 +2,7 @@
 #define HEAT_3D
 
 #include <stdbool.h>
+#include <stdio.h>
 #include "utilities.h"
 
 enum nummethod { FTCS, BE, CN };
@@ -11,8 +12,9 @@ typedef struct {
   int nx, ny, nz;
   int nsteps, sample, pause;
   double boundary, noise;
-  bool periodic;
+  bool periodic, quiet;
   enum nummethod method;
+  FILE *os, *op;
 } prefs3D;
 
 void solve(const prefs3D *p, double Cx, double Cy, double Cz, double(*init)(double,double,double));

@@ -30,8 +30,7 @@ void solve(const prefs3D *p,
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
   signal(SIGPIPE, reset); // doesn't reset cursor
-  screen("\033[2J");        // clear screen
-  screen("\033[?25l");      // hide cursor
+  if (!p->quiet) screen("\033[2J\033[?25l"); // clear screen and hide cursor
 
   double *x, *y, *z;
   double **A, **constA;   // in case we use BE or CN
@@ -51,7 +50,7 @@ void solve(const prefs3D *p,
   if (!p->periodic) set_constant_boundary(p, t);
   set_initial_with_noise(p, t, x, y, z, init);
 
-  show_t3D("T", t);
+  if (!p->quiet) show_t3D("T", t);
   usleep(p->pause*2);
 
   if (p->method == BE || p->method == CN)
@@ -82,8 +81,11 @@ void solve(const prefs3D *p,
 
     if (n%p->sample == 0)
     {
-      printf("%s %d\n", methodnames[p->method], n);
-      show_t3D("T", t);
+      if (!p->quiet)
+      {
+        printf("%s %d\n", methodnames[p->method], n);
+        show_t3D("T", t);
+      }
       usleep(p->pause);
     }
   }
@@ -98,7 +100,7 @@ void solve(const prefs3D *p,
   }
   free_t3D(t);
   free_t3D(tnew);
-  screen("\033[?25h"); // show cursor$
+  if (!p->quiet) screen("\033[?25h"); // show cursor$
 }
 
 void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z, 
