@@ -1,6 +1,9 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
+#include <stdio.h>
+#include <stdbool.h>
+
 #define DEBUG debug(__LINE__);
 // #define DEBUG
 
@@ -23,6 +26,8 @@ typedef struct {
 t3D *create_t3D(long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
 void copy_t3D(t3D *d, const t3D *s);
 void show_t3D(const char *s, const t3D *t);
+void output_t3D(FILE *stream, int n, const t3D *t);
 void free_t3D(t3D *t);
+double timer(bool mode);
 
 #endif

@@ -3,6 +3,8 @@
 #include <stdlib.h> // malloc and free
 #include <stdio.h>  // printf
 #include <assert.h> // assert
+#include <time.h>   // CLOCKS_PER_SEC
+#include <sys/times.h> // times
 
 void debug(int line) { printf("%d\n", line); }
 void screen(const char *s) { printf(s); }
@@ -104,9 +106,28 @@ void show_t3D(const char *s, const t3D *t)
   show_d3tensor(s, t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
 }
 
+void output_t3D(FILE *stream, int n, const t3D *t)
+{
+  for (long i = t->nrl; i <= t->nrh; i++)
+    for (long j = t->ncl; j <= t->nch; j++)
+      for (long k = t->ndl; k <= t->ndh; k++)
+        fprintf(stream, "%d %ld %ld %ld %.16e\n", n, i, j, k, t->T[i][j][k]);
+}
+
 void free_t3D(t3D *t)
 {
   free_d3tensor(t->T, t->nrl, t->nrh, t->ncl, t->nch, t->ndl, t->ndh);
   t->T = NULL;
   free(t);
+}
+
+double timer(bool mode)
+{
+  // true: start the timer
+  // false: return time in seconds since timer was last started
+  static clock_t initial_utime;
+  struct tms buf;
+  times(&buf);
+  if (mode) initial_utime = buf.tms_utime;
+  return (buf.tms_utime-initial_utime) / (double) CLOCKS_PER_SEC;
 }

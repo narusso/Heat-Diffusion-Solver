@@ -61,6 +61,7 @@ void solve(const prefs3D *p,
     populate_becs_matrix(p, constA, X, Y, Z, Cx, Cy, Cz); // build it once
   }
 
+  if (p->op) timer(true); // start timer outside loop
   for (int n=1; n <= p->nsteps; n++)        // repeat the loop nsteps times
   {
     if (p->method == FTCS)
@@ -69,7 +70,7 @@ void solve(const prefs3D *p,
     } else if (p->method == BE)
     {
       copy_dmatrix(A, constA, 1, X*Y*Z, 1, X*Y*Z); // copy it every time :(
-      becs(tnew, t, A);
+      becs(p, tnew, t, A);
     }
     else if (p->method == CN)
     {
@@ -81,6 +82,8 @@ void solve(const prefs3D *p,
 
     if (n%p->sample == 0)
     {
+      if (p->op) { fprintf(p->op, "%d %.16e\n", n, timer(false)); }
+      if (p->os) output_t3D(p->os, n, t);
       if (!p->quiet)
       {
         printf("%s %d\n", methodnames[p->method], n);
@@ -202,7 +205,7 @@ void cn(const prefs3D *p, t3D *d, t3D *s,
   free_t3D(b);
 }
 
-void becs(t3D *d, t3D *s,
+void becs(const prefs3D *p, t3D *d, t3D *s,
           double **A)
 {
   long X = s->nrh-s->nrl+1; // include boundaries
