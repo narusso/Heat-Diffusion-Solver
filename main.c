@@ -93,17 +93,20 @@ int main(int argc, char *argv[])
     p->os = fopen(out_soln, "w");
     if (p->os)
       fprintf(stdout, "solution data goes to %s\n", out_soln);
-    else
+    else {
       fprintf(stderr, "Couldn't open %s for writing\n", out_soln);
-
+      exit(EXIT_FAILURE);
+    }
   }
   if (out_perf)
   {
     p->op = fopen(out_perf, "w");
     if (p->op)
       fprintf(stdout, "performance data goes to %s\n", out_perf);
-    else
+    else {
       fprintf(stderr, "Couldn't open %s for writing\n", out_soln);
+      exit(EXIT_FAILURE);
+    }
   }
   solve(p, Cx, Cy, Cz, gauss3);
   if (p->os) fclose(p->os);
