@@ -5,6 +5,7 @@
 #include <assert.h> // assert
 #include <time.h>   // CLOCKS_PER_SEC
 #include <sys/times.h> // times
+#include <unistd.h> // sysconf
 
 void debug(int line) { printf("%d\n", line); }
 void screen(const char *s) { printf(s); }
@@ -125,9 +126,11 @@ double timer(bool mode)
 {
   // true: start the timer
   // false: return time in seconds since timer was last started
-  static clock_t initial_utime;
+  static clock_t initial_time;
+  static long ticks_per_second = 0;
+  if (ticks_per_second==0) ticks_per_second = sysconf(_SC_CLK_TCK);
   struct tms buf;
   times(&buf);
-  if (mode) initial_utime = buf.tms_utime;
-  return (buf.tms_utime-initial_utime) / (double) CLOCKS_PER_SEC;
+  if (mode) initial_time = buf.tms_utime+buf.tms_stime;
+  return (buf.tms_utime+buf.tms_stime-initial_time) / (double) ticks_per_second;
 }
