@@ -6,4 +6,4 @@ heat_2D: heat_2D.o nrutil.o gauss_elim.o
 main: main.o heat_3D.o nrutil.o gauss_elim.o utilities.o
 timing: main
 	for M in FTCS CN BE; do \
-	 time ./main -q -X1 -Y1 -Z1 -x14 -y14 -z14 -n3 -s1 -p0 -t.1 -r0 -b0 -m$$M -O$${M}_perf.dat; done
+	 for D in `seq 2 4 14`; do time ./main -q -X1 -Y1 -Z1 -x$$D -y$$D -z$$D -n4 -s1 -p0 -t.01 -r0 -b0 -m$$M -O$${M}_$${D}_perf.dat; done; done

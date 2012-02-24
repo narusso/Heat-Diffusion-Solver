@@ -82,7 +82,7 @@ void solve(const prefs3D *p,
 
     if (n%p->sample == 0)
     {
-      if (p->op) { fprintf(p->op, "%d %.16e\n", n, timer(false)); }
+      if (p->op) { fprintf(p->op, "%d %.3e\n", n, timer(false)); }
       if (p->os) output_t3D(p->os, n, t);
       if (!p->quiet)
       {
