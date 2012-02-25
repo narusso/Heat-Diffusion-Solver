@@ -60,6 +60,9 @@ int main(int argc, char *argv[])
         if (strcmp(optarg, "FTCS") == 0) { p->method = FTCS; break; }
         else if (strcmp(optarg, "BE") == 0) { p->method = BE; break; }
         else if (strcmp(optarg, "CN") == 0) { p->method = CN; break; }
+        else if (strcmp(optarg, "BEj") == 0) { p->method = BEj; break; }
+        else if (strcmp(optarg, "BEgs") == 0) { p->method = BEgs; break; }
+        else if (strcmp(optarg, "BEsor") == 0) { p->method = BEsor; break; }
       case 'o':
         if (strcmp(optarg, ".") == 0) out_soln = "/tmp/heat_3D_soln.dat";
         else out_soln = optarg;
@@ -121,7 +124,8 @@ void usage(char *name)
     "[-n number of time steps to calculate ]", "[-s how many time steps between reports ]",
     "[-p how long to pause reports (in seconds) ]", "[-a diffusivity constant (in m/s^2) ]",
     "[-t length of time step (in seconds) ]", "[-r ratio of noise applied to initial condition (0=none) ]",
-    "[-b value of constant boundary condition (or p for periodic) ]", "[-m method to use (FTCS, BE, or CN) ]",
+    "[-b value of constant boundary condition (or p for periodic) ]",
+    "[-m method (FTCS BE CN BEj BEgs BEsor) ]",
     "[-o filename for plottable solution data ]", "[-O filename for plottable performance data ]",
     "[-q suppress normal output ]",
   };
