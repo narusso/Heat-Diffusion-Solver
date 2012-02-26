@@ -8,10 +8,10 @@ CMD=./main -q -X1 -Y1 -Z1 -n3 -s1 -p0 -t.01 -r0 -b0
 timing: timing_ex timing_im timing_im_new
 timing_ex: main
 	for M in FTCS; do \
-	 for D in `seq 5 1 49`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done
+	 for D in `seq 1 1 99`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done
 timing_im: main
 	for M in CN BE; do \
-	 for D in `seq 5 1 15`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done
+	 for D in `seq 1 1 15`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done
 timing_im_new: main
-	for M in BEj BEgs BEsor; do \
-	 for D in `seq 5 1 6`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done
+	for M in BEj offBEgs offBEsor; do \
+	 for D in `seq 1 1 99`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done

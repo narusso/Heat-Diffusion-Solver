@@ -183,8 +183,10 @@ void bej(const prefs3D *p, t3D *d, t3D *s,
   double ***xnew = temp->T;
   double ***xold = s->T;
   int MAX_ITER = 2000;
+  int elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
   for (int m = 0; m < MAX_ITER; m++)
   {
+    double diff = 0;
     for (int i = s->nrl+1; i <= s->nrh-1; i++)
       for (int j = s->ncl+1; j <= s->nch-1; j++)
         for (int k = s->ndl+1; k <= s->ndh-1; k++)
@@ -193,8 +195,9 @@ void bej(const prefs3D *p, t3D *d, t3D *s,
                         + Cy/(2*Cy+1)*(x[i][j-1][k] + x[i][j+1][k])
                         + Cz/(2*Cz+1)*(x[i][j][k-1] + x[i][j][k+1])
                         + 1/(2*Cx+2*Cy+2*Cz+1) * xold[i][j][k];
+          diff += fabs(xnew[i][j][k] - x[i][j][k]);
         }
-    // if (mean(abs(x-xnew))) < 1.e-6) break;
+    if (diff/elements < 1.e-15) break;
     double ***t = x; x = xnew; xnew = t;
   }
   free_t3D(temp);
