@@ -13,5 +13,5 @@ timing_im: main
 	for M in CN BE; do \
 	 for D in `seq 1 1 15`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done
 timing_im_new: main
-	for M in BEj offBEgs offBEsor; do \
+	for M in BEj BEgs offBEsor; do \
 	 for D in `seq 1 1 99`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done

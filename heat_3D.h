@@ -22,6 +22,7 @@ void ftcs(const prefs3D *p, t3D *d, t3D *s, double Cx, double Cy, double Cz);
 void cn(const prefs3D *p, t3D *d, t3D *s, double **A, double Cx, double Cy, double Cz);
 void becs(const prefs3D *p, t3D *d, t3D *s, double **A);
 void bej(const prefs3D *p, t3D *d, t3D *s, double Cx, double Cy, double Cz);
+void begs(const prefs3D *p, t3D *d, t3D *s, double Cx, double Cy, double Cz);
 void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z, double Cx, double Cy, double Cz);
 void set_constant_boundary(const prefs3D *p, t3D *t);
 void set_initial_with_noise(const prefs3D *p, t3D *t, double *x, double *y, double *z, double(*init)(double,double,double));
