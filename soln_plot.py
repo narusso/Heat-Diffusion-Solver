@@ -4,7 +4,9 @@ import scipy, numpy
 import os, sys, re
 import matplotlib.pyplot as plt
 
-y = scipy.loadtxt("soln.dat")
+filename = "soln.dat"
+if (sys.argv[1]): filename = sys.argv[1]
+y = scipy.loadtxt(filename)
 timesteps = len(numpy.unique(y[:, 0]))
 dx = len(numpy.unique(y[:, 1]))
 dy = len(numpy.unique(y[:, 2]))

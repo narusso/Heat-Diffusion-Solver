@@ -8,6 +8,7 @@
 #include <string.h> // strlen
 #include <stdbool.h> // bool
 #include <assert.h> // assert
+void show_params(FILE *f, int argc, char **argv);
 void usage(char *name);
 
 int main(int argc, char *argv[])
@@ -100,6 +101,7 @@ int main(int argc, char *argv[])
       fprintf(stderr, "Couldn't open %s for writing\n", out_soln);
       exit(EXIT_FAILURE);
     }
+    show_params(p->os, argc, argv);
   }
   if (out_perf)
   {
@@ -109,11 +111,21 @@ int main(int argc, char *argv[])
       fprintf(stderr, "Couldn't open %s for writing\n", out_soln);
       exit(EXIT_FAILURE);
     }
+    show_params(p->op, argc, argv);
   }
   solve(p, Cx, Cy, Cz, gauss3);
   if (p->os) fclose(p->os);
   if (p->op) fclose(p->op);
+  if (!p->quiet) show_params(stdout, argc, argv);
   exit(EXIT_SUCCESS);
+}
+
+void show_params(FILE *f, int argc, char **argv)
+{
+    // Output parameters into data file for reproducibility
+    fprintf(f, "# ");
+    for (int i = 0; i < argc; i++) fprintf(f, "%s ", argv[i]);
+    fprintf(f, "\n");
 }
 
 void usage(char *name)
