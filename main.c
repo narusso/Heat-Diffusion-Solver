@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
         else if (strcmp(optarg, "BEj") == 0) { p->method = BEj; break; }
         else if (strcmp(optarg, "BEgs") == 0) { p->method = BEgs; break; }
         else if (strcmp(optarg, "BEsor") == 0) { p->method = BEsor; break; }
+        else { usage(argv[0]); exit(EXIT_FAILURE); }
       case 'o':
         if (strcmp(optarg, ".") == 0) out_soln = "/tmp/heat_3D_soln.dat";
         else out_soln = optarg;
