@@ -46,7 +46,7 @@ plt.subplot(212)
 for m in timevsvolume.keys():
   timevsvolume[m].sort()
   t = scipy.array(timevsvolume[m])
-  plt.semilogy(
+  plt.loglog(
     t[:, 0],
     t[:, 1],
     '.-', label=m
