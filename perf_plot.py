@@ -6,12 +6,14 @@ import matplotlib.pyplot as plt
 rawdata = {}
 timevslength = {}
 timevsvolume = {}
-files=os.listdir(".")
+dir="."
+if sys.argv[1]: dir=sys.argv[1]
+files=os.listdir(dir)
 for file in files:
   try:
     (method, size, suffix) = file.split('_')
     if suffix != "perf.dat": continue
-    rawdata[(method,int(size))] = scipy.loadtxt(file)
+    rawdata[(method,int(size))] = scipy.loadtxt(os.path.join(dir,file))
   except ValueError:
     pass
 
