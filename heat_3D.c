@@ -8,6 +8,7 @@
 #define __USE_BSD
 #include <unistd.h> // usleep
 #include <stdlib.h> // exit
+#include <assert.h> // assert
 
 const char *methodnames[] = {
  [FTCS] = "Forward-Time Center-Space (explicit)",
@@ -26,6 +27,27 @@ void reset(int s)
     exit(EXIT_FAILURE);
 }
 
+d3D *create_d3D(long X, long Y, long Z)
+{ // only uses 1-based vectors 
+  d3D *disc;
+  disc = (d3D *) malloc((size_t) sizeof(d3D));
+  disc->xx = dvector(1, X);
+  disc->yy = dvector(1, Y);
+  disc->zz = dvector(1, Z);
+  for (long i = 1; i <= X; i++) disc->xx[i] = (i-1) / (double) (X-1);
+  for (long j = 1; j <= Y; j++) disc->yy[j] = (j-1) / (double) (Y-1);
+  for (long k = 1; k <= Z; k++) disc->zz[k] = (k-1) / (double) (Z-1);
+  return disc;
+}
+
+void free_d3D(d3D *disc)
+{
+  free_dvector(disc->xx, 1, disc->X);
+  free_dvector(disc->yy, 1, disc->Y);
+  free_dvector(disc->zz, 1, disc->Z);
+  free(disc);
+}
+
 void solve(const prefs3D *p,
            double Cx, double Cy, double Cz,
            double(*init)(double,double,double))
@@ -35,23 +57,17 @@ void solve(const prefs3D *p,
   signal(SIGPIPE, reset); // doesn't reset cursor
   if (!p->quiet) screen("\033[2J\033[?25l"); // clear screen and hide cursor
 
-  double *x, *y, *z;
   double **A, **constA;   // in case we use BE or CN
-  int X = p->nx+2;
-  int Y = p->ny+2;
-  int Z = p->nz+2;
-  x = dvector(1, X);
-  y = dvector(1, Y);
-  z = dvector(1, Z);
-  for (int i = 1; i <= X; i++) x[i] = (i-1) / (double) (p->nx+1);
-  for (int j = 1; j <= Y; j++) y[j] = (j-1) / (double) (p->ny+1);
-  for (int k = 1; k <= Z; k++) z[k] = (k-1) / (double) (p->nz+1);
+  long X = p->nx+2;
+  long Y = p->ny+2;
+  long Z = p->nz+2;
+  d3D *disc = create_d3D(X, Y, Z);
 
   t3D *t = create_t3D(1, X, 1, Y, 1, Z);
   t3D *tnew = create_t3D(1, X, 1, Y, 1, Z);
   
   if (!p->periodic) set_constant_boundary(p, t);
-  set_initial_with_noise(p, t, x, y, z, init);
+  set_initial_with_noise(p, t, disc, init);
 
   if (!p->quiet) show_t3D("T", t);
   usleep(p->pause*2);
@@ -69,28 +85,28 @@ void solve(const prefs3D *p,
   {
     if (p->method == FTCS)
     {
-      ftcs(p, tnew, t, Cx, Cy, Cz);
+      ftcs(p, tnew, t, Cx, Cy, Cz, disc);
     } else if (p->method == BE)
     {
       copy_dmatrix(A, constA, 1, X*Y*Z, 1, X*Y*Z); // copy it every time :(
-      becs(p, tnew, t, A);
+      becs(p, tnew, t, A, disc);
     }
     else if (p->method == CN)
     {
       copy_dmatrix(A, constA, 1, X*Y*Z, 1, X*Y*Z); // copy it every time :(
-      cn(p, tnew, t, A, Cx, Cy, Cz);
+      cn(p, tnew, t, A, Cx, Cy, Cz, disc);
     }
     else if (p->method == BEj)
     {
-      bej(p, tnew, t, Cx, Cy, Cz);
+      bej(p, tnew, t, Cx, Cy, Cz, disc);
     }
     else if (p->method == BEgs)
     {
-      begs(p, tnew, t, Cx, Cy, Cz);
+      begs(p, tnew, t, Cx, Cy, Cz, disc);
     }
     else if (p->method == BEsor)
     {
-      besor(p, tnew, t, Cx, Cy, Cz);
+      besor(p, tnew, t, Cx, Cy, Cz, disc);
     }
 
     copy_t3D(t, tnew);
@@ -108,9 +124,6 @@ void solve(const prefs3D *p,
     }
   }
 
-  free_dvector(x, 1, X);
-  free_dvector(y, 1, Y);
-  free_dvector(z, 1, Z);
   if (p->method == BE || p->method == CN)
   {
     free_dmatrix(A, 1, X*Y*Z, 1, X*Y*Z);
@@ -127,16 +140,16 @@ void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
   // Prepare matrix A from the the Backward Euler discretization using the Cx, Cy, Cz values
 
   // malloc doesn't guarentee zeroed memory so we zero it out first
-  for (int i = 1; i <= X*Y*Z; i++)
-    for (int j = 1; j <= X*Y*Z; j++)
+  for (long i = 1; i <= X*Y*Z; i++)
+    for (long j = 1; j <= X*Y*Z; j++)
       A[i][j] = 0;
   if (p->periodic)
   {
-    for (int m = 1; m <= X*Y*Z; m++)
+    for (long m = 1; m <= X*Y*Z; m++)
     {
       // Fill main diagonal
       A[m][m] = 2*(Cx+Cy+Cz)+1;
-      int left, right;
+      long left, right;
   
       // Fill off diagonals
       left  = ((m-1)%Z == 0)   ? m+Z-1 : m-1;
@@ -154,7 +167,7 @@ void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
       A[m][left] = A[m][right] = -Cx;
     }
   } else { // constant boundary
-    for (int m = 1; m <= X*Y*Z; m++)
+    for (long m = 1; m <= X*Y*Z; m++)
     {
       // if m is on any boundary, set diagonal to 1 and continue
       if ((m-1)%Z == 0 || (m-1)%Z == Z-1 ||
@@ -178,7 +191,7 @@ void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
 }
 
 void bej(const prefs3D *p, t3D *d, t3D *s,
-         double Cx, double Cy, double Cz)
+         double Cx, double Cy, double Cz, const d3D *disc)
 {
   // determine values for d->T from s->T according to prefs from p
   // and constants Cx, Cy, Cz
@@ -191,13 +204,13 @@ void bej(const prefs3D *p, t3D *d, t3D *s,
   double ***xnew = temp->T;
   double ***xold = s->T;
   int MAX_ITER = 2000;
-  int elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  for (int m = 0; m < MAX_ITER; m++)
+  long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
+  for (long m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
-    for (int i = s->nrl+1; i <= s->nrh-1; i++)
-      for (int j = s->ncl+1; j <= s->nch-1; j++)
-        for (int k = s->ndl+1; k <= s->ndh-1; k++)
+    for (long i = s->nrl+1; i <= s->nrh-1; i++)
+      for (long j = s->ncl+1; j <= s->nch-1; j++)
+        for (long k = s->ndl+1; k <= s->ndh-1; k++)
         {
           xnew[i][j][k] = Cx/(2*Cx+1)*(x[i-1][j][k] + x[i+1][j][k])
                         + Cy/(2*Cy+1)*(x[i][j-1][k] + x[i][j+1][k])
@@ -208,11 +221,16 @@ void bej(const prefs3D *p, t3D *d, t3D *s,
     if (diff/elements < 1.e-15) break;
     double ***t = x; x = xnew; xnew = t;
   }
+  if (p->source)
+    for (long i = d->nrl+1; i <= d->nrh-1; i++)
+      for (long j = d->ncl+1; j <= d->nch-1; j++)
+        for (long k = d->ndl+1; k <= d->ndh-1; k++)
+          d->T[i][j][k] += p->source(i, j, k, disc);
   free_t3D(temp);
 }
 
 void begs(const prefs3D *p, t3D *d, t3D *s,
-          double Cx, double Cy, double Cz)
+          double Cx, double Cy, double Cz, const d3D *disc)
 {
   // determine values for d->T from s->T according to prefs from p
   // and constants Cx, Cy, Cz
@@ -223,13 +241,13 @@ void begs(const prefs3D *p, t3D *d, t3D *s,
   double ***x = d->T;
   double ***xold = s->T;
   int MAX_ITER = 2000;
-  int elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  for (int m = 0; m < MAX_ITER; m++)
+  long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
+  for (long m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
-    for (int i = s->nrl+1; i <= s->nrh-1; i++)
-      for (int j = s->ncl+1; j <= s->nch-1; j++)
-        for (int k = s->ndl+1; k <= s->ndh-1; k++)
+    for (long i = s->nrl+1; i <= s->nrh-1; i++)
+      for (long j = s->ncl+1; j <= s->nch-1; j++)
+        for (long k = s->ndl+1; k <= s->ndh-1; k++)
         {
           double t = Cx/(2*Cx+1)*(x[i-1][j][k] + x[i+1][j][k])
                    + Cy/(2*Cy+1)*(x[i][j-1][k] + x[i][j+1][k])
@@ -240,10 +258,15 @@ void begs(const prefs3D *p, t3D *d, t3D *s,
         }
     if (diff/elements < 1.e-15) break;
   }
+  if (p->source)
+    for (long i = d->nrl+1; i <= d->nrh-1; i++)
+      for (long j = d->ncl+1; j <= d->nch-1; j++)
+        for (long k = d->ndl+1; k <= d->ndh-1; k++)
+          d->T[i][j][k] += p->source(i, j, k, disc);
 }
 
 void besor(const prefs3D *p, t3D *d, t3D *s,
-           double Cx, double Cy, double Cz)
+           double Cx, double Cy, double Cz, const d3D *disc)
 {
   double w = 1.65; // move into prefs
   // determine values for d->T from s->T according to prefs from p
@@ -255,13 +278,13 @@ void besor(const prefs3D *p, t3D *d, t3D *s,
   double ***x = d->T;
   double ***xold = s->T;
   int MAX_ITER = 2000;
-  int elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  for (int m = 0; m < MAX_ITER; m++)
+  long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
+  for (long m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
-    for (int i = s->nrl+1; i <= s->nrh-1; i++)
-      for (int j = s->ncl+1; j <= s->nch-1; j++)
-        for (int k = s->ndl+1; k <= s->ndh-1; k++)
+    for (long i = s->nrl+1; i <= s->nrh-1; i++)
+      for (long j = s->ncl+1; j <= s->nch-1; j++)
+        for (long k = s->ndl+1; k <= s->ndh-1; k++)
         {
           double t = (1-w)*x[i][j][k] + w*Cx/(2*Cx+1)*(x[i-1][j][k] + x[i+1][j][k])
                    + w*Cy/(2*Cy+1)*(x[i][j-1][k] + x[i][j+1][k])
@@ -272,10 +295,15 @@ void besor(const prefs3D *p, t3D *d, t3D *s,
         }
     if (diff/elements < 1.e-15) break;
   }
+  if (p->source)
+    for (long i = d->nrl+1; i <= d->nrh-1; i++)
+      for (long j = d->ncl+1; j <= d->nch-1; j++)
+        for (long k = d->ndl+1; k <= d->ndh-1; k++)
+          d->T[i][j][k] += p->source(i, j, k, disc);
 }
 
 void cn(const prefs3D *p, t3D *d, t3D *s,
-          double **A, double Cx, double Cy, double Cz)
+          double **A, double Cx, double Cy, double Cz, const d3D *disc)
 {
   long X = s->nrh-s->nrl+1; // include boundaries
   long Y = s->nch-s->ncl+1;
@@ -283,9 +311,9 @@ void cn(const prefs3D *p, t3D *d, t3D *s,
   t3D *x = create_t3D(1, X, 1, Y, 1, Z);
   t3D *b = create_t3D(1, X, 1, Y, 1, Z);
   // flatten src into b
-  for (int i = s->nrl; i <= s->nrh; i++)
-    for (int j = s->ncl; j <= s->nch; j++)
-      for (int k = s->ndl; k <= s->ndh; k++)
+  for (long i = s->nrl; i <= s->nrh; i++)
+    for (long j = s->ncl; j <= s->nch; j++)
+      for (long k = s->ndl; k <= s->ndh; k++)
       {
         double *B = &b->T[i][j][k];
         *B = s->T[i][j][k];
@@ -313,12 +341,18 @@ void cn(const prefs3D *p, t3D *d, t3D *s,
   // unflatten x into dst 
   copy_t3D(d, x);
 
+  if (p->source)
+    for (long i = d->nrl+1; i <= d->nrh-1; i++)
+      for (long j = d->ncl+1; j <= d->nch-1; j++)
+        for (long k = d->ndl+1; k <= d->ndh-1; k++)
+          d->T[i][j][k] += p->source(i, j, k, disc);
+
   free_t3D(x);
   free_t3D(b);
 }
 
 void becs(const prefs3D *p, t3D *d, t3D *s,
-          double **A)
+          double **A, const d3D *disc)
 {
   long X = s->nrh-s->nrl+1; // include boundaries
   long Y = s->nch-s->ncl+1;
@@ -334,16 +368,22 @@ void becs(const prefs3D *p, t3D *d, t3D *s,
   // unflatten x into dst 
   copy_t3D(d, x);
 
+  if (p->source)
+    for (long i = d->nrl+1; i <= d->nrh-1; i++)
+      for (long j = d->ncl+1; j <= d->nch-1; j++)
+        for (long k = d->ndl+1; k <= d->ndh-1; k++)
+          d->T[i][j][k] += p->source(i, j, k, disc);
+
   free_t3D(x);
   free_t3D(b);
 }
 
 void ftcs(const prefs3D *p, t3D *d, t3D *s,
-          double Cx, double Cy, double Cz)
+          double Cx, double Cy, double Cz, const d3D *disc)
 {
-  for (int i = s->nrl; i <= s->nrh; i++)            // calculate new values for all cells
-    for (int j = s->ncl; j <= s->nch; j++)
-      for (int k = s->ndl; k <= s->ndh; k++)
+  for (long i = s->nrl; i <= s->nrh; i++)            // calculate new values for all cells
+    for (long j = s->ncl; j <= s->nch; j++)
+      for (long k = s->ndl; k <= s->ndh; k++)
       {
         d->T[i][j][k] = s->T[i][j][k];
         if (p->periodic) {
@@ -354,10 +394,12 @@ void ftcs(const prefs3D *p, t3D *d, t3D *s,
           d->T[i][j][k] += Cy*(s->T[i][left][k] + s->T[i][right][k] - 2*s->T[i][j][k]);
           left = (k == s->ndl) ? s->ndh : k-1; right = (k == s->ndh) ? s->ndl : k+1;
           d->T[i][j][k] += Cz*(s->T[i][j][left] + s->T[i][j][right] - 2*s->T[i][j][k]);
+          if (p->source) d->T[i][j][k] += p->source(i, j, k, disc);
         } else if (!(i==s->nrl || i==s->nrh || j==s->ncl ||j==s->nch || k==s->ndl || k==s->ndh)) {
-            d->T[i][j][k] += Cx*(s->T[i-1][j][k] + s->T[i+1][j][k] - 2*s->T[i][j][k]) +
-                            Cy*(s->T[i][j-1][k] + s->T[i][j+1][k] - 2*s->T[i][j][k]) +
-                            Cz*(s->T[i][j][k-1] + s->T[i][j][k+1] - 2*s->T[i][j][k]);
+          d->T[i][j][k] += Cx*(s->T[i-1][j][k] + s->T[i+1][j][k] - 2*s->T[i][j][k]) +
+                           Cy*(s->T[i][j-1][k] + s->T[i][j+1][k] - 2*s->T[i][j][k]) +
+                           Cz*(s->T[i][j][k-1] + s->T[i][j][k+1] - 2*s->T[i][j][k]);
+          if (p->source) d->T[i][j][k] += p->source(i, j, k, disc);
         }
       }
 }
@@ -365,25 +407,25 @@ void ftcs(const prefs3D *p, t3D *d, t3D *s,
 void set_constant_boundary(const prefs3D *p, t3D *t)
 {
   // first row
-  for (int j = t->ncl; j <= t->nch; j++)
-    for (int k = t->ndl; k <= t->ndh; k++)
+  for (long j = t->ncl; j <= t->nch; j++)
+    for (long k = t->ndl; k <= t->ndh; k++)
       t->T[t->nrl][j][k] = p->boundary;
   // middle rows
-  for (int i = t->nrl+1; i <= t->nrh-1; i++)
+  for (long i = t->nrl+1; i <= t->nrh-1; i++)
   {
     // first column, then middle columns, than last column
-    for (int k = t->ndl; k <= t->ndh; k++) t->T[i][t->ncl][k] = p->boundary;
-    for (int j = t->ncl+1; j <= t->nch-1; j++) t->T[i][j][t->ndl] = t->T[i][j][t->ndh] = p->boundary;
-    for (int k = t->ndl; k <= t->ndh; k++) t->T[i][t->nch][k] = p->boundary;
+    for (long k = t->ndl; k <= t->ndh; k++) t->T[i][t->ncl][k] = p->boundary;
+    for (long j = t->ncl+1; j <= t->nch-1; j++) t->T[i][j][t->ndl] = t->T[i][j][t->ndh] = p->boundary;
+    for (long k = t->ndl; k <= t->ndh; k++) t->T[i][t->nch][k] = p->boundary;
   }
   // last row
-  for (int j = t->ncl; j <= t->nch; j++)
-    for (int k = t->ndl; k <= t->ndh; k++)
+  for (long j = t->ncl; j <= t->nch; j++)
+    for (long k = t->ndl; k <= t->ndh; k++)
       t->T[t->nrh][j][k] = p->boundary;
 }
 
 void set_initial_with_noise(const prefs3D *p, t3D *t,
-                            double *x, double *y, double *z,
+                            const d3D *disc,
                             double(*init)(double,double,double))
 {
   // if the initial number is I, the result will be between (1-noise)*I and (1+noise)*I
@@ -391,13 +433,24 @@ void set_initial_with_noise(const prefs3D *p, t3D *t,
   double B = 2*p->noise/RAND_MAX;
   long rl = t->nrl, rh = t->nrh, cl = t->ncl, ch = t->nch, dl = t->ndl, dh = t->ndh;
   if (!p->periodic) { rl++; rh--; cl++; ch--; dl++; dh--; }
-  for (int i = rl; i <= rh; i++)
-    for (int j = cl; j <= ch; j++)
-      for (int k = dl; k <= dh; k++)
-        t->T[i][j][k] = init(x[i], y[j], z[k])*(A + B*rand());
+  for (long i = rl; i <= rh; i++)
+    for (long j = cl; j <= ch; j++)
+      for (long k = dl; k <= dh; k++)
+        t->T[i][j][k] = init(disc->xx[i], disc->yy[j], disc->zz[k])*(A + B*rand());
 }
 
 double gauss3(double x, double y, double z)
 {
+  assert(x <= 1); assert(x >= 0); assert(y <= 1); assert(y >= 0); assert(z <= 1); assert(z >= 0);
   return exp(-pow((5*x-2.5), 2))*exp(-pow((5*y-2.5), 2))*exp(-pow((5*z-2.5), 2));
+}
+
+double plane_source(long i, long j, long k, const d3D *disc)
+{
+  double x = disc->xx[i];
+  double y = disc->yy[j];
+  double z = disc->zz[k];
+  assert(x <= 1); assert(x >= 0); assert(y <= 1); assert(y >= 0); assert(z <= 1); assert(z >= 0);
+  if (fabs(x-y) < 1e-4) return .00000001;
+  return 0;
 }
