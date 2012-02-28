@@ -451,6 +451,6 @@ double plane_source(long i, long j, long k, const d3D *disc)
   double y = disc->yy[j];
   double z = disc->zz[k];
   assert(x <= 1); assert(x >= 0); assert(y <= 1); assert(y >= 0); assert(z <= 1); assert(z >= 0);
-  if (fabs(x-y) < 1e-4) return .00000001;
+  if (fabs(x-y) < 1e-4) return .0001;
   return 0;
 }
