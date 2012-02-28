@@ -1,10 +1,10 @@
-$ make main # adjust compiler in Makefile if necessary
-/opt/gcc/gcc-4.5.2/bin/gcc -Wall -std=c99 -MMD -MP   -c -o main.o main.c
-/opt/gcc/gcc-4.5.2/bin/gcc -Wall -std=c99 -MMD -MP   -c -o heat_3D.o heat_3D.c
-/opt/gcc/gcc-4.5.2/bin/gcc -Wall -std=c99 -MMD -MP   -c -o nrutil.o nrutil.c
-/opt/gcc/gcc-4.5.2/bin/gcc -Wall -std=c99 -MMD -MP   -c -o gauss_elim.o gauss_elim.c
-/opt/gcc/gcc-4.5.2/bin/gcc -Wall -std=c99 -MMD -MP   -c -o utilities.o utilities.c
-/opt/gcc/gcc-4.5.2/bin/gcc -lm -Wl,-rpath=/opt/gcc/gcc-4.5.2/lib  main.o heat_3D.o nrutil.o gauss_elim.o utilities.o   -o main
+$ make # simplified Makefile
+cc -Wall -std=c99 -MMD -MP   -c -o main.o main.c
+cc -Wall -std=c99 -MMD -MP   -c -o heat_3D.o heat_3D.c
+cc -Wall -std=c99 -MMD -MP   -c -o nrutil.o nrutil.c
+cc -Wall -std=c99 -MMD -MP   -c -o gauss_elim.o gauss_elim.c
+cc -Wall -std=c99 -MMD -MP   -c -o utilities.o utilities.c
+cc -lm  main.o heat_3D.o nrutil.o gauss_elim.o utilities.o   -o main
 $ ./main -h
 ./main: invalid option -- h
 Usage: ./main [-X length in x dimension (in meters) ]
@@ -25,27 +25,19 @@ Usage: ./main [-X length in x dimension (in meters) ]
               [-O filename for plottable performance data ]
               [-q suppress normal output ]
 Specify . as the filename to use a default value
-$ ./main -x2 -y2 -z3 -n500 -s10 -p.1 -t.03 -r 0 -m FTCS -b 9 -q
+$ ./main -x30 -y30 -z30 -n640 -s80 -t.03 -r 1 -m BEgs -b 0 -q -oBEgs.dat
+$ ./soln_plot.py BEgs.dat
 
 The code is written in C99, using a variant of nrutil.{c,h} with double
-precision third order tensors. The output is ANSI text, though -o can be
-used to generate plottable data in an output file.
+precision third order tensors. Output can be ANSI text, or a data file
+which can be plotted using soln_plot.py, a short script which shows 8
+timeslices, starting with the initial condition (with z fixed at L/2).
 
-I am confident in my implementation of these features:
- l_x != l_y != l_z
- dx != dy != dz
- command line options for everything, including which method, physical setup, etc.
- default vaules for when command line options are left out
- FTCS, BE, and CN
- gaussian elimination
- guassian curve with noise
- periodic boundary conditions
- runtime performance plotting, using -O flag and plot.py script to generate hw{2,3}_plot.png
+These features have been added:
+ runtime performance plotting, using -O flag and perf_plot.py script to generate hw{2,3}_plot.png
+ data plotting, using -o flat and soln_plot.py
  Jacobi, Gauss-Seidel, and SOR, with simplifying assumptions about boundaries, etc.
-
-These features were not attempted:
- ADI CN
- source term
+ source term, always enabled, adding a small amount of heat at the x=y plane
 
 todo:
 
@@ -60,6 +52,3 @@ use struct for other collections of parameters?
 add "method" for t3D to normalize index access so N(t, 1, 1, 1) -> t->T[nrl][ncl][ndl]
 
 allow non-constant boundary conditions in BEj, BEgs, BEsor
-
-pass disc to methods so they can give source() access to it to translate i into xx[i], and
-know x[1] and X[Y] if necessary
