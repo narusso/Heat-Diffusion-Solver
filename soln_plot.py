@@ -19,6 +19,6 @@ plt.clf()
 rows=2; cols=4
 for i in range(rows*cols):
   plt.subplot(rows,cols,i+1)
-  plt.imshow(y[i*timesteps/(rows*cols), :, :, dz/2]); plt.colorbar()
+  plt.imshow(y[i*timesteps/(rows*cols), :, :, dz/2], vmin=0, vmax=1.3); plt.colorbar()
 
 plt.show()
