@@ -15,3 +15,5 @@ timing_im: main
 timing_im_new: main
 	for M in offBEj offBEgs BEsor; do \
 	 for D in `seq 1 1 99`; do $(CMD) -x$$D -y$$D -z$$D -m$$M -Otimings/$${M}_$${D}_perf.dat; done; done
+data:
+	./main -n800 -s100 -t.02 -x40 -y40 -z40 -r2 -b0 -q -odata/BEgs.1 -mBEgs

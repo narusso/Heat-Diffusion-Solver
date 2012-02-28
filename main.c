@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
   p->quiet     = false;                   // whether to print data to stdout
   p->os        = NULL;                    // FILE* for solution data
   p->op        = NULL;                    // FILE* for performance data
+  p->source    = plane_source;            // only one source function available
   LX = LY = LZ = 1;                       // length of 1D object in m along each axis
   alpha        = 1.1234e-4;               // diffusivity of copper in m^2/s
   dt           = .003;                    // length of one time step in seconds
