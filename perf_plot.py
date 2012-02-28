@@ -7,7 +7,7 @@ rawdata = {}
 timevslength = {}
 timevsvolume = {}
 dir="."
-if sys.argv[1]: dir=sys.argv[1]
+if len(sys.argv) > 1: dir=sys.argv[1]
 files=os.listdir(dir)
 for file in files:
   try:
