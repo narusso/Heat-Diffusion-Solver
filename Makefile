@@ -1,17 +1,6 @@
-GCC452=/opt/gcc/gcc-4.5.2
-CC=${GCC452}/bin/gcc
-
-CXXFLAGS=-Wall -std=c++0x
 CFLAGS=-Wall -std=c99
 CFLAGS+=-MMD -MP
 LDFLAGS=-lm
-
-MACHINE=$(shell uname -m)
-ifeq ($(MACHINE),x86_64)
-  LDFLAGS+=-Wl,-rpath=${GCC452}/lib64
-else
-  LDFLAGS+=-Wl,-rpath=${GCC452}/lib
-endif
 
 -include pre.mk
 
