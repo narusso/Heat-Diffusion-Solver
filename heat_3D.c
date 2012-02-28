@@ -193,11 +193,6 @@ void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
 void bej(const prefs3D *p, t3D *d, t3D *s,
          double Cx, double Cy, double Cz, const d3D *disc)
 {
-  // determine values for d->T from s->T according to prefs from p
-  // and constants Cx, Cy, Cz
-  // pretend all sorts of things for now (eg. boundary = 0)
-  // pretend d, s, and temp t3D all use same indexing
-  // pretend temp->T is zeroed out
   copy_t3D(d, s); // set first guess to last solution
   t3D *temp = create_t3D(d->nrl, d->nrh, d->ncl, d->nch, d->ndl, d->ndh);
   double ***x = d->T;
@@ -205,22 +200,24 @@ void bej(const prefs3D *p, t3D *d, t3D *s,
   double ***xold = s->T;
   int MAX_ITER = 2000;
   long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  for (long m = 0; m < MAX_ITER; m++)
+  long m;
+  for (m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
     for (long i = s->nrl+1; i <= s->nrh-1; i++)
       for (long j = s->ncl+1; j <= s->nch-1; j++)
         for (long k = s->ndl+1; k <= s->ndh-1; k++)
         {
-          xnew[i][j][k] = Cx/(2*Cx+1)*(x[i-1][j][k] + x[i+1][j][k])
-                        + Cy/(2*Cy+1)*(x[i][j-1][k] + x[i][j+1][k])
-                        + Cz/(2*Cz+1)*(x[i][j][k-1] + x[i][j][k+1])
+          xnew[i][j][k] = Cx/(2*Cx+2*Cy+2*Cz+1)*(x[i-1][j][k] + x[i+1][j][k])
+                        + Cy/(2*Cx+2*Cy+2*Cz+1)*(x[i][j-1][k] + x[i][j+1][k])
+                        + Cz/(2*Cx+2*Cy+2*Cz+1)*(x[i][j][k-1] + x[i][j][k+1])
                         + 1/(2*Cx+2*Cy+2*Cz+1) * xold[i][j][k];
           diff += fabs(xnew[i][j][k] - x[i][j][k]);
         }
     if (diff/elements < 1.e-15) break;
     double ***t = x; x = xnew; xnew = t;
   }
+  fprintf(stderr, "iterations: %ld\n", m);
   if (p->source)
     for (long i = d->nrl+1; i <= d->nrh-1; i++)
       for (long j = d->ncl+1; j <= d->nch-1; j++)
@@ -232,32 +229,29 @@ void bej(const prefs3D *p, t3D *d, t3D *s,
 void begs(const prefs3D *p, t3D *d, t3D *s,
           double Cx, double Cy, double Cz, const d3D *disc)
 {
-  // determine values for d->T from s->T according to prefs from p
-  // and constants Cx, Cy, Cz
-  // pretend all sorts of things for now (eg. boundary = 0)
-  // pretend d, s, and temp t3D all use same indexing
-  // pretend temp->T is zeroed out
   copy_t3D(d, s); // set first guess to last solution
   double ***x = d->T;
   double ***xold = s->T;
   int MAX_ITER = 2000;
   long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  for (long m = 0; m < MAX_ITER; m++)
+  long m;
+  for (m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
     for (long i = s->nrl+1; i <= s->nrh-1; i++)
       for (long j = s->ncl+1; j <= s->nch-1; j++)
         for (long k = s->ndl+1; k <= s->ndh-1; k++)
         {
-          double t = Cx/(2*Cx+1)*(x[i-1][j][k] + x[i+1][j][k])
-                   + Cy/(2*Cy+1)*(x[i][j-1][k] + x[i][j+1][k])
-                   + Cz/(2*Cz+1)*(x[i][j][k-1] + x[i][j][k+1])
+          double t = Cx/(2*Cx+2*Cy+2*Cz+1)*(x[i-1][j][k] + x[i+1][j][k])
+                   + Cy/(2*Cx+2*Cy+2*Cz+1)*(x[i][j-1][k] + x[i][j+1][k])
+                   + Cz/(2*Cz+2*Cy+2*Cz+1)*(x[i][j][k-1] + x[i][j][k+1])
                    + 1/(2*Cx+2*Cy+2*Cz+1) * xold[i][j][k];
           diff += fabs(t - x[i][j][k]);
           x[i][j][k] = t;
         }
     if (diff/elements < 1.e-15) break;
   }
+  fprintf(stderr, "iterations: %ld\n", m);
   if (p->source)
     for (long i = d->nrl+1; i <= d->nrh-1; i++)
       for (long j = d->ncl+1; j <= d->nch-1; j++)
@@ -268,33 +262,33 @@ void begs(const prefs3D *p, t3D *d, t3D *s,
 void besor(const prefs3D *p, t3D *d, t3D *s,
            double Cx, double Cy, double Cz, const d3D *disc)
 {
-  double w = 1.65; // move into prefs
-  // determine values for d->T from s->T according to prefs from p
-  // and constants Cx, Cy, Cz
-  // pretend all sorts of things for now (eg. boundary = 0)
-  // pretend d, s, and temp t3D all use same indexing
-  // pretend temp->T is zeroed out
+  // number of iterations is minimized when w=1, which turns this into gauss-seidel.
+  static double w = 1.0; // move into prefs
+  w += .01;
+  printf("w: %f\n", w);
   copy_t3D(d, s); // set first guess to last solution
   double ***x = d->T;
   double ***xold = s->T;
   int MAX_ITER = 2000;
   long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  for (long m = 0; m < MAX_ITER; m++)
+  long m;
+  for (m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
     for (long i = s->nrl+1; i <= s->nrh-1; i++)
       for (long j = s->ncl+1; j <= s->nch-1; j++)
         for (long k = s->ndl+1; k <= s->ndh-1; k++)
         {
-          double t = (1-w)*x[i][j][k] + w*Cx/(2*Cx+1)*(x[i-1][j][k] + x[i+1][j][k])
-                   + w*Cy/(2*Cy+1)*(x[i][j-1][k] + x[i][j+1][k])
-                   + w*Cz/(2*Cz+1)*(x[i][j][k-1] + x[i][j][k+1])
+          double t = (1-w)*x[i][j][k] + w*Cx/(2*Cx+2*Cy+2*Cz+1)*(x[i-1][j][k] + x[i+1][j][k])
+                   + w*Cy/(2*Cx+2*Cy+2*Cz+1)*(x[i][j-1][k] + x[i][j+1][k])
+                   + w*Cz/(2*Cx+2*Cy+2*Cz+1)*(x[i][j][k-1] + x[i][j][k+1])
                    + w/(2*Cx+2*Cy+2*Cz+1) * xold[i][j][k];
           diff += fabs(t - x[i][j][k]);
           x[i][j][k] = t;
         }
     if (diff/elements < 1.e-15) break;
   }
+  fprintf(stderr, "iterations: %ld\n", m);
   if (p->source)
     for (long i = d->nrl+1; i <= d->nrh-1; i++)
       for (long j = d->ncl+1; j <= d->nch-1; j++)
