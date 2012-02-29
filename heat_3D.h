@@ -22,6 +22,7 @@ typedef struct {
   enum nummethod method;
   FILE *os, *op;
   double (*source)(long i, long j, long k, const d3D *disc);
+  double w; // omega for SOR
 } prefs3D;
 
 void free_d3D(d3D *disc);

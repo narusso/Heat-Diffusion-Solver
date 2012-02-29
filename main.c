@@ -36,9 +36,10 @@ int main(int argc, char *argv[])
   LX = LY = LZ = 1;                       // length of 1D object in m along each axis
   alpha        = 1.1234e-4;               // diffusivity of copper in m^2/s
   dt           = .003;                    // length of one time step in seconds
+  p->w         = 1.65;                    // omega for SOR
 
   int opt;
-  while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:o:O:q")) != -1)
+  while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:o:O:w:q")) != -1)
   {
     switch (opt) {
       case 'X': LX = atof(optarg); break;
@@ -53,6 +54,7 @@ int main(int argc, char *argv[])
       case 'a': alpha = atof(optarg); break;
       case 't': dt = atof(optarg); break;
       case 'r': p->noise = atof(optarg); break;
+      case 'w': p->w = atof(optarg); break;
       case 'q': p->quiet = true; break;
       case 'b':
         if (strcmp(optarg, "p") == 0) p->periodic = true;

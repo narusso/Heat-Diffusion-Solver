@@ -261,7 +261,7 @@ void besor(const prefs3D *p, t3D *d, t3D *s,
   // number of iterations is 0 when w=0, as then it just copies the old value.
   // number of iterations is low when w=1, which turns this into gauss-seidel.
   // shouldn't there be some other good value?
-  double w = 1.0; // move into prefs
+  double w = p->w;
   copy_t3D(d, s); // set first guess to last solution
   double ***x = d->T;
   double ***xold = s->T;
