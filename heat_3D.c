@@ -274,7 +274,8 @@ void besor(const prefs3D *p, t3D *d, t3D *s,
       for (long j = s->ncl+1; j <= s->nch-1; j++)
         for (long k = s->ndl+1; k <= s->ndh-1; k++)
         {
-          double t = (1-w)*x[i][j][k] + w*Cx/(2*Cx+2*Cy+2*Cz+1)*(x[i-1][j][k] + x[i+1][j][k])
+          double t = (1-w)*x[i][j][k]
+                   + w*Cx/(2*Cx+2*Cy+2*Cz+1)*(x[i-1][j][k] + x[i+1][j][k])
                    + w*Cy/(2*Cx+2*Cy+2*Cz+1)*(x[i][j-1][k] + x[i][j+1][k])
                    + w*Cz/(2*Cx+2*Cy+2*Cz+1)*(x[i][j][k-1] + x[i][j][k+1])
                    + w/(2*Cx+2*Cy+2*Cz+1) * xold[i][j][k];
