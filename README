@@ -39,6 +39,10 @@ These features have been added:
  Jacobi, Gauss-Seidel, and SOR, with simplifying assumptions about boundaries, etc.
  source term, always enabled, adding a small amount of heat at the x=y plane
 
+Concerns:
+ SOR seems to do best when omega is one, which makes it the same as Gauss-Seidel.
+ Have I coded it incorrectly?
+
 todo:
 
 separate files for direct and iterative matrix solvers?
