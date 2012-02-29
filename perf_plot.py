@@ -45,13 +45,13 @@ ymin, ymax = plt.ylim()
 plt.ylim(ymin=-(abs(ymax)/10))
 # Show half as much on this graph
 xmin, xmax = plt.xlim()
-plt.xlim(xmax=(xmax/2), xmin=5)
+# plt.xlim(xmax=(xmax/2), xmin=5)
 
 plt.subplot(212)
 for m in timevsvolume.keys():
   timevsvolume[m].sort()
   t = scipy.array(timevsvolume[m])
-  plt.loglog(
+  plt.plot(
     t[:, 0],
     t[:, 1],
     '.-', label=m

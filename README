@@ -39,9 +39,9 @@ These features have been added:
  Jacobi, Gauss-Seidel, and SOR, with simplifying assumptions about boundaries, etc.
  source term, always enabled, adding a small amount of heat at the x=y plane
 
-Concerns:
- SOR seems to do best when omega is one, which makes it the same as Gauss-Seidel.
- Have I coded it incorrectly?
+SOR performance:
+I compared SOR to GS and J for a variety of problem sizes, using many values for omega.
+When dx >= 200, omega between 1.10 and 1.20 produced slightly faster convergence than GS.
 
 todo:
 
