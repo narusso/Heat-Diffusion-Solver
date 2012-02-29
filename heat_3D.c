@@ -200,8 +200,7 @@ void bej(const prefs3D *p, t3D *d, t3D *s,
   double ***xold = s->T;
   int MAX_ITER = 2000;
   long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  long m;
-  for (m = 0; m < MAX_ITER; m++)
+  for (long m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
     for (long i = s->nrl+1; i <= s->nrh-1; i++)
@@ -217,7 +216,6 @@ void bej(const prefs3D *p, t3D *d, t3D *s,
     if (diff/elements < 1.e-15) break;
     double ***t = x; x = xnew; xnew = t;
   }
-  fprintf(stderr, "iterations: %ld\n", m);
   if (p->source)
     for (long i = d->nrl+1; i <= d->nrh-1; i++)
       for (long j = d->ncl+1; j <= d->nch-1; j++)
@@ -234,8 +232,7 @@ void begs(const prefs3D *p, t3D *d, t3D *s,
   double ***xold = s->T;
   int MAX_ITER = 2000;
   long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  long m;
-  for (m = 0; m < MAX_ITER; m++)
+  for (long m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
     for (long i = s->nrl+1; i <= s->nrh-1; i++)
@@ -251,7 +248,6 @@ void begs(const prefs3D *p, t3D *d, t3D *s,
         }
     if (diff/elements < 1.e-15) break;
   }
-  fprintf(stderr, "iterations: %ld\n", m);
   if (p->source)
     for (long i = d->nrl+1; i <= d->nrh-1; i++)
       for (long j = d->ncl+1; j <= d->nch-1; j++)
@@ -262,17 +258,16 @@ void begs(const prefs3D *p, t3D *d, t3D *s,
 void besor(const prefs3D *p, t3D *d, t3D *s,
            double Cx, double Cy, double Cz, const d3D *disc)
 {
-  // number of iterations is minimized when w=1, which turns this into gauss-seidel.
-  static double w = 1.0; // move into prefs
-  w += .01;
-  printf("w: %f\n", w);
+  // number of iterations is 0 when w=0, as then it just copies the old value.
+  // number of iterations is low when w=1, which turns this into gauss-seidel.
+  // shouldn't there be some other good value?
+  double w = 1.0; // move into prefs
   copy_t3D(d, s); // set first guess to last solution
   double ***x = d->T;
   double ***xold = s->T;
   int MAX_ITER = 2000;
   long elements = (s->nrh-s->nrl+1)*(s->nch-s->ncl+1)*(s->ndh-s->ndl+1);
-  long m;
-  for (m = 0; m < MAX_ITER; m++)
+  for (long m = 0; m < MAX_ITER; m++)
   {
     double diff = 0;
     for (long i = s->nrl+1; i <= s->nrh-1; i++)
@@ -288,7 +283,6 @@ void besor(const prefs3D *p, t3D *d, t3D *s,
         }
     if (diff/elements < 1.e-15) break;
   }
-  fprintf(stderr, "iterations: %ld\n", m);
   if (p->source)
     for (long i = d->nrl+1; i <= d->nrh-1; i++)
       for (long j = d->ncl+1; j <= d->nch-1; j++)

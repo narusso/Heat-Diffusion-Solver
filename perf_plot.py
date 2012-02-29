@@ -43,9 +43,9 @@ plt.legend(loc=0)
 # Make sure we can see the zero values:
 ymin, ymax = plt.ylim()
 plt.ylim(ymin=-(abs(ymax)/10))
-# Don't half as much on this graph
+# Show half as much on this graph
 xmin, xmax = plt.xlim()
-plt.xlim(xmax=(xmax/2))
+plt.xlim(xmax=(xmax/2), xmin=5)
 
 plt.subplot(212)
 for m in timevsvolume.keys():
