@@ -56,3 +56,5 @@ use struct for other collections of parameters?
 add "method" for t3D to normalize index access so N(t, 1, 1, 1) -> t->T[nrl][ncl][ndl]
 
 allow non-constant boundary conditions in BEj, BEgs, BEsor
+
+test github push
