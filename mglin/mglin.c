@@ -49,7 +49,7 @@ void mglin(double **u, int n, int ncycle){
   ngrid=ng;                       /* reset ngrid to original size */
 
   for (j=2;j<=ngrid;j++) {        /* loop over coarse to fine, starting at level 2 */
-    printf("at grid level %d\n",j);
+    fprintf(stderr, "at grid level %d\n",j);
     nn=2*nn-1;                     
     iu[j]=dmatrix(1,nn,1,nn);     /* setup grids for lhs,rhs, and residual */
     irhs[j]=dmatrix(1,nn,1,nn);
