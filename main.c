@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
   p->alpha     = 1.1234e-4;               // diffusivity of copper in m^2/s
   p->dt        = .003;                    // length of one time step in seconds
   p->w         = 1.65;                    // omega for SOR
+  p->init      = gauss3;                  // initialize domain with 3D Gaussian
 
   int opt;
   while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:o:O:w:qg")) != -1)
@@ -128,9 +129,9 @@ int main(int argc, char *argv[])
   if (p->multigrid)
   {
     printf("multigrid not yet implemented\n");
-    mgsolve();
+    mgsolve(p);
   } else {
-    solve(p, gauss3);
+    solve(p);
   }
   if (p->os) fclose(p->os);
   if (p->op) fclose(p->op);

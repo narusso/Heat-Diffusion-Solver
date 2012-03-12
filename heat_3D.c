@@ -48,12 +48,11 @@ void free_d3D(d3D *disc)
   free(disc);
 }
 
-void mgsolve(void)
+void mgsolve(const prefs3D *p)
 {
 }
 
-void solve(const prefs3D *p,
-           double(*init)(double,double,double))
+void solve(const prefs3D *p)
 {
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
@@ -77,7 +76,7 @@ void solve(const prefs3D *p,
   t3D *tnew = create_t3D(1, X, 1, Y, 1, Z);
   
   if (!p->periodic) set_constant_boundary(p, t);
-  set_initial_with_noise(p, t, disc, init);
+  set_initial_with_noise(p, t, disc, p->init);
 
   if (!p->quiet) show_t3D("T", t);
   usleep(p->pause*2);

@@ -25,13 +25,14 @@ typedef struct {
   double w; // omega for SOR
   double LX, LY, LZ;
   double alpha, dt;
+  double (*init)(double x, double y, double z);
 } prefs3D;
 
 void free_d3D(d3D *disc);
 d3D *create_d3D(long X, long Y, long Z);
 
-void mgsolve(void);
-void solve(const prefs3D *p, double(*init)(double,double,double));
+void mgsolve(const prefs3D *p);
+void solve(const prefs3D *p);
 void ftcs(const prefs3D *p, t3D *d, t3D *s, double Cx, double Cy, double Cz, const d3D *disc);
 void cn(const prefs3D *p, t3D *d, t3D *s, double **A, double Cx, double Cy, double Cz, const d3D *disc);
 void becs(const prefs3D *p, t3D *d, t3D *s, double **A, const d3D *disc);
