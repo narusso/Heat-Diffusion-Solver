@@ -48,14 +48,24 @@ void free_d3D(d3D *disc)
   free(disc);
 }
 
+void mgsolve(void)
+{
+}
+
 void solve(const prefs3D *p,
-           double Cx, double Cy, double Cz,
            double(*init)(double,double,double))
 {
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
   signal(SIGPIPE, reset); // doesn't reset cursor
   if (!p->quiet) screen("\033[2J\033[?25l"); // clear screen and hide cursor
+
+  // derived constants
+  double dx, dy, dz, Cx, Cy, Cz;
+  dx = p->LX/(p->nx+1); dy = p->LY/(p->ny+1); dz = p->LZ/(p->nz+1);
+  Cx = p->alpha*p->dt/(dx*dx);
+  Cy = p->alpha*p->dt/(dy*dy);
+  Cz = p->alpha*p->dt/(dz*dz);
 
   double **A, **constA;   // in case we use BE or CN
   long X = p->nx+2;

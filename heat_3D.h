@@ -18,17 +18,20 @@ typedef struct {
   int nx, ny, nz;
   int nsteps, sample, pause;
   double boundary, noise;
-  bool periodic, quiet;
+  bool periodic, quiet, multigrid;
   enum nummethod method;
   FILE *os, *op;
   double (*source)(long i, long j, long k, const d3D *disc);
   double w; // omega for SOR
+  double LX, LY, LZ;
+  double alpha, dt;
 } prefs3D;
 
 void free_d3D(d3D *disc);
 d3D *create_d3D(long X, long Y, long Z);
 
-void solve(const prefs3D *p, double Cx, double Cy, double Cz, double(*init)(double,double,double));
+void mgsolve(void);
+void solve(const prefs3D *p, double(*init)(double,double,double));
 void ftcs(const prefs3D *p, t3D *d, t3D *s, double Cx, double Cy, double Cz, const d3D *disc);
 void cn(const prefs3D *p, t3D *d, t3D *s, double **A, double Cx, double Cy, double Cz, const d3D *disc);
 void becs(const prefs3D *p, t3D *d, t3D *s, double **A, const d3D *disc);

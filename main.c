@@ -15,13 +15,14 @@ int main(int argc, char *argv[])
 {
   // parameters
   prefs3D ps, *p; p = &ps;
-  // parameters not directly used by solver
-  double LX, LY, LZ, alpha, dt;
   char *out_soln = NULL;                  // filename for solution data
   char *out_perf = NULL;                  // filename for performance data
 
   // default parameter values
-  p->nx = p->ny = p->nz = 3;              // number of divisions along each axis
+  p->nx = p->ny = p->nz = 3;              // number of internal points along each axis
+                                          // nx+2 is total number of points
+                                          // nx+1 is number of intervals
+                                          // LX/(nx+1) is size of interval
   p->nsteps    = 6;                       // number of time steps
   p->sample    = 2;                       // how often to show output
   p->pause     = 10000;                   // how long to pause after showing output
@@ -30,32 +31,34 @@ int main(int argc, char *argv[])
   p->periodic  = false;                   // periodic boundary condition
   p->method    = BE;                      // method for solving Ax=b
   p->quiet     = false;                   // whether to print data to stdout
+  p->multigrid = false;                   // whether to use multigrid w/BE
   p->os        = NULL;                    // FILE* for solution data
   p->op        = NULL;                    // FILE* for performance data
   p->source    = plane_source;            // only one source function available
-  LX = LY = LZ = 1;                       // length of 1D object in m along each axis
-  alpha        = 1.1234e-4;               // diffusivity of copper in m^2/s
-  dt           = .003;                    // length of one time step in seconds
+  p->LX = p->LY = p->LZ = 1;              // length of 1D object in m along each axis
+  p->alpha     = 1.1234e-4;               // diffusivity of copper in m^2/s
+  p->dt        = .003;                    // length of one time step in seconds
   p->w         = 1.65;                    // omega for SOR
 
   int opt;
-  while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:o:O:w:q")) != -1)
+  while ((opt = getopt(argc, argv, "X:Y:Z:x:y:z:n:s:p:a:t:r:b:m:o:O:w:qg")) != -1)
   {
     switch (opt) {
-      case 'X': LX = atof(optarg); break;
-      case 'Y': LY = atof(optarg); break;
-      case 'Z': LZ = atof(optarg); break;
+      case 'X': p->LX = atof(optarg); break;
+      case 'Y': p->LY = atof(optarg); break;
+      case 'Z': p->LZ = atof(optarg); break;
       case 'x': p->nx = atoi(optarg); break;
       case 'y': p->ny = atoi(optarg); break;
       case 'z': p->nz = atoi(optarg); break;
       case 'n': p->nsteps = atoi(optarg); break;
       case 's': p->sample = atoi(optarg); break;
       case 'p': p->pause = atof(optarg)*1000*1000; break;
-      case 'a': alpha = atof(optarg); break;
-      case 't': dt = atof(optarg); break;
+      case 'a': p->alpha = atof(optarg); break;
+      case 't': p->dt = atof(optarg); break;
       case 'r': p->noise = atof(optarg); break;
       case 'w': p->w = atof(optarg); break;
       case 'q': p->quiet = true; break;
+      case 'g': p->multigrid = true; break;
       case 'b':
         if (strcmp(optarg, "p") == 0) p->periodic = true;
         else p->boundary = atof(optarg);
@@ -83,17 +86,23 @@ int main(int argc, char *argv[])
   }
 
   // sanity checks
-  assert(LX > 0); assert(LY > 0); assert(LZ > 0);
+  assert(p->LX > 0); assert(p->LY > 0); assert(p->LZ > 0);
   assert(p->nx > 0); assert(p->ny > 0); assert(p->nz > 0);
-  assert(p->sample > 0); assert(alpha > 0); assert(p->pause >= 0);
-  assert(dt > 0); 
+  assert(p->sample > 0); assert(p->alpha > 0); assert(p->pause >= 0);
+  assert(p->dt > 0); 
 
-  // derived constants
-  double dx, dy, dz, Cx, Cy, Cz;
-  dx = LX/p->nx; dy = LY/p->ny; dz = LZ/p->nz;
-  Cx = alpha*dt/(dx*dx);
-  Cy = alpha*dt/(dy*dy);
-  Cz = alpha*dt/(dz*dz);
+  // To use the multigrid method, number of intervals must be a power of 2
+  if (p->multigrid)
+  {
+    int n; // number of intervals
+    int e; // exponent
+    for (n=p->nx+1, e=0; n >>= 1; e++) ;
+    if (p->nx+1 != (1L << e)) { fprintf(stderr,"nx+1 must be a power of 2 for multigrid method\n"); exit(1); }
+    for (n=p->ny+1, e=0; n >>= 1; e++) ;
+    if (p->ny+1 != (1L << e)) { fprintf(stderr,"ny+1 must be a power of 2 for multigrid method\n"); exit(1); }
+    for (n=p->nz+1, e=0; n >>= 1; e++) ;
+    if (p->nz+1 != (1L << e)) { fprintf(stderr,"nz+1 must be a power of 2 for multigrid method\n"); exit(1); }
+  }
 
   srand(getpid()*time(NULL));
   if (out_soln)
@@ -116,7 +125,13 @@ int main(int argc, char *argv[])
     }
     show_params(p->op, argc, argv);
   }
-  solve(p, Cx, Cy, Cz, gauss3);
+  if (p->multigrid)
+  {
+    printf("multigrid not yet implemented\n");
+    mgsolve();
+  } else {
+    solve(p, gauss3);
+  }
   if (p->os) fclose(p->os);
   if (p->op) fclose(p->op);
   if (!p->quiet) show_params(stdout, argc, argv);
@@ -135,8 +150,8 @@ void usage(char *name)
 {
   const char *option[] = {
     "[-X length in x dimension (in meters) ]", "[-Y length in y dimension (in meters) ]",
-    "[-Z length in z dimension (in meters) ]", "[-x number of divisions along x dimension ]",
-    "[-y number of divisions along y dimension ]", "[-z number of divisions along z dimension ]",
+    "[-Z length in z dimension (in meters) ]", "[-x number of internal points along x dimension ]",
+    "[-y number of internal points along y dimension ]", "[-z number of internal points along z dimension ]",
     "[-n number of time steps to calculate ]", "[-s how many time steps between reports ]",
     "[-p how long to pause reports (in seconds) ]", "[-a diffusivity constant (in m/s^2) ]",
     "[-t length of time step (in seconds) ]", "[-r ratio of noise applied to initial condition (0=none) ]",
@@ -144,6 +159,7 @@ void usage(char *name)
     "[-m method (FTCS BE CN BEj BEgs BEsor) ]",
     "[-o filename for plottable solution data ]", "[-O filename for plottable performance data ]",
     "[-q suppress normal output ]",
+    "[-g use multigrid/BE technique ]",
   };
   int indentation = strlen("Usage:  ") + strlen(name);
   fprintf(stderr, "Usage: %s ", name);
