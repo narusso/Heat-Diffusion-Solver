@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
     if (p->ny+1 != (1L << e)) { fprintf(stderr,"ny+1 must be a power of 2 for multigrid method\n"); exit(1); }
     for (n=p->nz+1, e=0; n >>= 1; e++) ;
     if (p->nz+1 != (1L << e)) { fprintf(stderr,"nz+1 must be a power of 2 for multigrid method\n"); exit(1); }
+    if (p->nx != p->ny || p->ny != p->nz) { fprintf(stderr,"For multigrid method, nx==ny==nz\n"); exit(1); }
   }
 
   srand(getpid()*time(NULL));

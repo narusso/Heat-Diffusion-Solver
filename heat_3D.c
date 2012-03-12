@@ -28,7 +28,7 @@ void reset(int s)
 }
 
 d3D *create_d3D(long X, long Y, long Z)
-{ // only uses 1-based vectors 
+{ // only uses 1-based vectors
   d3D *disc;
   disc = (d3D *) malloc((size_t) sizeof(d3D));
   disc->xx = dvector(1, X);
@@ -50,6 +50,85 @@ void free_d3D(d3D *disc)
 
 void mgsolve(const prefs3D *p)
 {
+  const int ncycle=2, NPRE=2, NPOST=2;
+  signal(SIGFPE, reset);  // works
+  signal(SIGINT, reset);  // works
+  signal(SIGPIPE, reset); // doesn't reset cursor
+  if (!p->quiet) screen("\033[2J\033[?25l"); // clear screen and hide cursor
+
+  // Create temperature matrix of appropriate size
+  long X = p->nx+2;
+  long Y = p->ny+2;
+  long Z = p->nz+2;
+  t3D *t = create_t3D(1, X, 1, Y, 1, Z); // corresponds to u & n in mglin
+
+  // Initialize matrix
+  set_constant_boundary(p, t);
+  d3D *disc = create_d3D(X, Y, Z);
+  set_initial_with_noise(p, t, disc, p->init);
+
+  // Show temps
+  if (!p->quiet) show_t3D("T", t);
+  usleep(p->pause*2);
+
+  // Find number of grid levels needed
+  int ng = 0;
+  int nn = X; // we require nx==ny==nz
+  while (nn >>= 1) ng++;
+  if (X != 1+(1L << ng)) nrerror("nx+1 must be a power of 2 for multigrid.");
+
+  // Create arrays of pointers to data at each grid level
+  t3D *solution[ng+1]; // +1 to allow for 1-based addressing?
+  double ***rhs[ng+1];
+  double ***res[ng+1];
+  double ***destination[ng+1]; // not sure about rho vs rhs, so naming this generically for now
+
+  // Restrict solution to next (coarser) grid
+  int ngrid = ng-1; // ng is finest (original), ng-1 is 2nd finest, 1 is coarsest
+  nn = X/2+1; // new total number of points
+  destination[ngrid] = d3tensor(1, nn, 1, nn, 1, nn);
+  rstrct(destination[ngrid], t->T, nn);
+
+  // Do some solving, outputting along the way
+  fprintf(stderr, "pretending to do multigrid...\n");
+
+  // free resources
+  free_t3D(t);
+  free_d3D(disc);
+  if (!p->quiet) screen("\033[?25h"); // show cursor$
+
+  return;
+
+  // Not sure how much of this I'll want:
+  // derived constants, for finest grid level anyway...
+  double dx, dy, dz, Cx, Cy, Cz;
+  dx = p->LX/(p->nx+1); dy = p->LY/(p->ny+1); dz = p->LZ/(p->nz+1);
+  Cx = p->alpha*p->dt/(dx*dx);
+  Cy = p->alpha*p->dt/(dy*dy);
+  Cz = p->alpha*p->dt/(dz*dz);
+
+  t3D *tnew = create_t3D(1, X, 1, Y, 1, Z);
+
+  if (p->op) timer(true); // start timer outside loop
+  for (int n=1; n <= p->nsteps; n++)        // repeat the loop nsteps times
+  {
+    // Assume method is Gauss-Seidel
+    begs(p, tnew, t, Cx, Cy, Cz, disc);
+    copy_t3D(t, tnew);
+
+    if (n%p->sample == 0)
+    {
+      if (p->op) { fprintf(p->op, "%d %.3e\n", n, timer(false)); }
+      if (p->os) output_t3D(p->os, n, t);
+      if (!p->quiet)
+      {
+        printf("%s %d\n", methodnames[p->method], n);
+        show_t3D("T", t);
+      }
+      usleep(p->pause);
+    }
+  }
+  free_t3D(tnew);
 }
 
 void solve(const prefs3D *p)
@@ -74,7 +153,7 @@ void solve(const prefs3D *p)
 
   t3D *t = create_t3D(1, X, 1, Y, 1, Z);
   t3D *tnew = create_t3D(1, X, 1, Y, 1, Z);
-  
+
   if (!p->periodic) set_constant_boundary(p, t);
   set_initial_with_noise(p, t, disc, p->init);
 
@@ -140,10 +219,11 @@ void solve(const prefs3D *p)
   }
   free_t3D(t);
   free_t3D(tnew);
+  free_d3D(disc);
   if (!p->quiet) screen("\033[?25h"); // show cursor$
 }
 
-void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z, 
+void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
                           double Cx, double Cy, double Cz)
 {
   // Prepare matrix A from the the Backward Euler discretization using the Cx, Cy, Cz values
@@ -159,17 +239,17 @@ void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
       // Fill main diagonal
       A[m][m] = 2*(Cx+Cy+Cz)+1;
       long left, right;
-  
+
       // Fill off diagonals
       left  = ((m-1)%Z == 0)   ? m+Z-1 : m-1;
       right = ((m-1)%Z == Z-1) ? m-Z+1 : m+1;
       A[m][left] = A[m][right] = -Cz;
-  
+
       // Fill near bands
       left  = (((m-1)/Z)%Y == 0)   ? m+Z*(Y-1) : m-Z;
       right = (((m-1)/Z)%Y == Y-1) ? m-Z*(Y-1) : m+Z;
       A[m][left] = A[m][right] = -Cy;
-  
+
       // Fill far bands
       left  = (((m-1)/(Z*Y)%X) == 0)   ? m+Z*Y*(X-1) : m-Z*Y;
       right = (((m-1)/(Z*Y)%X) == X-1) ? m-Z*Y*(X-1) : m+Z*Y;
@@ -335,8 +415,8 @@ void cn(const prefs3D *p, t3D *d, t3D *s,
       }
   // solve Ax=b for x, using elimination (which expects 1-based 1D vectors)
   gaussian_elimination(A, (double *) x->T[1][1], (double *) b->T[1][1], X*Y*Z);
-  
-  // unflatten x into dst 
+
+  // unflatten x into dst
   copy_t3D(d, x);
 
   if (p->source)
@@ -363,7 +443,7 @@ void becs(const prefs3D *p, t3D *d, t3D *s,
   // solve Ax=b for x, using elimination (which expects 1-based 1D vectors)
   gaussian_elimination(A, (double *) x->T[1][1], (double *) b->T[1][1], X*Y*Z);
 
-  // unflatten x into dst 
+  // unflatten x into dst
   copy_t3D(d, x);
 
   if (p->source)
@@ -451,4 +531,25 @@ double plane_source(long i, long j, long k, const d3D *disc)
   assert(x <= 1); assert(x >= 0); assert(y <= 1); assert(y >= 0); assert(z <= 1); assert(z >= 0);
   if (fabs(x-y) < 1e-4) return .0001;
   return 0;
+}
+
+void rstrct(double ***dst, double ***src, long nh) // coarse nrl==ncl==ndl==1, nrh==nch==ndh==nh
+{
+  // for every point in coarse grid, if it's boundary, copy directly, else use half-weighting.
+  // don't bother incrementing indices into fine grid, as they are easily calculated.
+  long pf, qf, rf; // 3D fine indices: 1 to nh by 2's (eg. 1 3 5 7 9)
+  long pc, qc, rc; // 3D coarse indices: 1 to nh*2-1  (eg. 1 2 3 4 5)
+  for (pc=1; pc <= nh; pc+=1)
+    for (qc=1; qc <= nh; qc+=1)
+      for (rc=1; rc <= nh; rc+=1)
+      {
+        pf = pc*2-1; qf = qc*2-1; rf = rc*2-1;
+        if (pc==1 || pc==nh || qc==1 || qc == nh || rc==1 || rc == nh)
+          dst[pc][qc][rc] = src[pf][qf][rf];
+        else
+          dst[pc][qc][rc] = src[pf][qf][rf]/2.0 +
+                           (src[pf][qf][rf-1] + src[pf][qf][rf+1] +
+                            src[pf][qf-1][rf] + src[pf][qf+1][rf] +
+                            src[pf-1][qf][rf] + src[pf+1][qf][rf])/12.0;
+      }
 }
