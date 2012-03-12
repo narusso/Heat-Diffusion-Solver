@@ -7,9 +7,10 @@ void relax(double **u, double **rhs, int n)
 {
   H("");
   int i,ipass,isw,j,jsw=1;
-  double h,h2;
-  h=1.0/(n-1);
-  h2=h*h;
+  float alpha = 1.1234e-4; // diffusivity of copper in m^2/s
+  float dt = 0.00001;      // timestep chosen arbitrarily
+  float dx = 1.0/(n-1);    // n point -> n-1 intervals
+  float C = alpha*dt/(dx*dx);
   /* Red and black sweeps.*/
   /* jsw and isw toggle between 1 and 2 and
      determine starting row in each column
@@ -20,7 +21,6 @@ void relax(double **u, double **rhs, int n)
     for (j=2;j<n;j++,isw=3-isw)
       /*Gauss-Seidel formula.*/
       for (i=isw+1;i<n;i+=2) 
-	u[i][j]=0.25*(u[i+1][j]+u[i-1][j]+u[i][j+1]
-		      +u[i][j-1]-h2*rhs[i][j]);
+        u[i][j]=C*(u[i+1][j]+u[i-1][j]+u[i][j+1]+u[i][j-1]+rhs[i][j])/(1+4.0*C);
   }
 }

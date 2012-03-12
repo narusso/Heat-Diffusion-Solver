@@ -5,7 +5,7 @@
 #define NPOST 2
 #define NGMAX 15
 
-void mglin(double **u, int n, int ncycle, int nsteps);
+void mglin(double **u, int n, int ncycle);
 void addint(double **uf, double **uc, double **res, int nf);
 void copy(double **aout, double **ain, int n);
 void fill0(double **u, int n);

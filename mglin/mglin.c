@@ -1,11 +1,12 @@
 #include "mg.h"
+#include "utilities.h"
 #include "nrutil.h"
 #include<stdio.h>
 
 void mglin(double **u, int n, int ncycle){
 /*
-  Full Multigrid Algorithm for solution of the steady state heat
-  equation with forcing.  On input u[1..n][1..n] contains the
+  Full Multigrid Algorithm for solution of the time-dependent heat
+  equation with source term.  On input u[1..n][1..n] contains the
   right-hand side ρ, while on output it returns the solution.  The
   dimension n must be of the form 2j + 1 for some integer j. (j is
   actually the number of grid levels used in the solution, called ng
@@ -32,6 +33,9 @@ void mglin(double **u, int n, int ncycle){
   ngrid=ng-1;
   irho[ngrid]=dmatrix(1,nn,1,nn); 
   rstrct(irho[ngrid],u,nn);/* coarsens rhs (u at this point) to irho on mesh size nn */
+
+show_dmatrix("u", u, 1, n, 1, n);
+show_dmatrix("irho", irho[ngrid], 1, nn, 1, nn);
   
   /***continue setting up coarser grids down to coarsest level***/
   while (nn > 3) { 
