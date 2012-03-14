@@ -45,5 +45,7 @@ void set_initial_with_noise(const prefs3D *p, t3D *t, const const d3D *disc, dou
 double gauss3(double x, double y, double z);
 double plane_source(long i, long j, long k, const d3D *disc);
 void rstrct(double ***d, double ***src, long nh);
+void slvsml(const prefs3D *p, double ***solution, double ***rhs);
+void fill0(double ***m, long n);
 
 #endif

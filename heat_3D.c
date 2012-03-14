@@ -88,6 +88,29 @@ void mgsolve(const prefs3D *p)
   nn = X/2+1; // new total number of points
   destination[ngrid] = d3tensor(1, nn, 1, nn, 1, nn);
   rstrct(destination[ngrid], t->T, nn);
+  show_d3tensor("d[ngrid]", destination[ngrid], 1, nn, 1, nn, 1, nn);
+
+  while (nn > 3)
+  {
+    nn = nn/2+1;
+    destination[--ngrid] = d3tensor(1, nn, 1, nn, 1, nn);
+    rstrct(destination[ngrid], destination[ngrid+1], nn);
+    show_d3tensor("d[ngrid]", destination[ngrid], 1, nn, 1, nn, 1, nn);
+  }
+
+  // Solve directly at coarsest level
+  nn=3;
+  solution[1] = create_t3D(1,nn,1,nn,1,nn);
+  rhs[1]= d3tensor(1,nn,1,nn,1,nn); // why?
+  slvsml(p, solution[1]->T, destination[1]);
+  free_d3tensor(destination[1],1,nn,1,nn,1,nn);
+  ngrid=ng;
+  show_t3D("solution[1]->T", solution[1]);
+
+  for (int j=2;j<=ngrid;j++) {        /* loop over coarse to fine, starting at level 2 */
+    printf("j: %d\n", j);
+  }
+
 
   // Do some solving, outputting along the way
   fprintf(stderr, "pretending to do multigrid...\n");
@@ -226,7 +249,7 @@ void solve(const prefs3D *p)
 void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
                           double Cx, double Cy, double Cz)
 {
-  // Prepare matrix A from the the Backward Euler discretization using the Cx, Cy, Cz values
+  // Prepare matrix A from the Backward Euler discretization using the Cx, Cy, Cz values
 
   // malloc doesn't guarentee zeroed memory so we zero it out first
   for (long i = 1; i <= X*Y*Z; i++)
@@ -551,5 +574,24 @@ void rstrct(double ***dst, double ***src, long nh) // coarse nrl==ncl==ndl==1, n
                            (src[pf][qf][rf-1] + src[pf][qf][rf+1] +
                             src[pf][qf-1][rf] + src[pf][qf+1][rf] +
                             src[pf-1][qf][rf] + src[pf+1][qf][rf])/12.0;
+        /*printf("d[%ld][%ld][%ld]: %f s[%ld][%ld][%ld]: %f\n",
+               pc,qc,rc,dst[pc][qc][rc],
+               pf,qf,rf,src[pf][qf][rf]);*/
       }
+}
+
+void slvsml(const prefs3D *p, double ***solution, double ***rhs)
+{
+  double dx=0.5;
+  double C = p->alpha*p->dt/(dx*dx);
+  fill0(solution,3);
+  solution[2][2][2] = rhs[2][2][2]/(1+6*C);
+}
+
+void fill0(double ***m, long n)
+{
+  for (int p=1; p<=n; p++)
+    for (int q=1; q<=n; q++)
+      for (int r=1; r<=n; r++)
+        m[p][q][r] = 0;
 }
