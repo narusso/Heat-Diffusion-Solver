@@ -127,9 +127,7 @@ int main(int argc, char *argv[])
     }
     show_params(p->op, argc, argv);
   }
-  if (p->multigrid)
-  {
-    printf("multigrid not yet implemented\n");
+  if (p->multigrid) {
     mgsolve(p);
   } else {
     solve(p);

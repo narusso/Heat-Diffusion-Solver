@@ -50,7 +50,7 @@ void free_d3D(d3D *disc)
 
 void mgsolve(const prefs3D *p)
 {
-  const int ncycle=2, NPRE=2, NPOST=2;
+  const int ncycle=3, NPRE=2, NPOST=2;
   signal(SIGFPE, reset);  // works
   signal(SIGINT, reset);  // works
   signal(SIGPIPE, reset); // doesn't reset cursor
@@ -83,112 +83,89 @@ void mgsolve(const prefs3D *p)
   double ***res[ng+1];
   double ***destination[ng+1]; // not sure about rho vs rhs, so naming this generically for now
 
-  // Restrict solution to next (coarser) grid
   int ngrid = ng-1; // ng is finest (original), ng-1 is 2nd finest, 1 is coarsest
   nn = X/2+1; // new total number of points
-  destination[ngrid] = d3tensor(1, nn, 1, nn, 1, nn);
-  rstrct(destination[ngrid], t->T, nn);
-  show_d3tensor("d[ngrid]", destination[ngrid], 1, nn, 1, nn, 1, nn);
 
-  while (nn > 3)
-  {
-    nn = nn/2+1;
-    destination[--ngrid] = d3tensor(1, nn, 1, nn, 1, nn);
-    rstrct(destination[ngrid], destination[ngrid+1], nn);
-    show_d3tensor("d[ngrid]", destination[ngrid], 1, nn, 1, nn, 1, nn);
-  }
-
-  // Solve directly at coarsest level
-  nn=3;
-  solution[1] = d3tensor(1,nn,1,nn,1,nn);
-  rhs[1]= d3tensor(1,nn,1,nn,1,nn); // why?
-  slvsml(p, solution[1], destination[1]);
-  free_d3tensor(destination[1],1,nn,1,nn,1,nn);
-  ngrid=ng;
-  //D show_d3tensor("solution[1]", solution[1], 1, nn, 1, nn, 1, nn);
-
-  for (int j=2;j<=ngrid;j++) {        // loop over coarse to fine, starting at level 2
-    fprintf(stderr, "at grid level %d\n",j);
-    nn=2*nn-1;
-    solution[j]=d3tensor(1,nn,1,nn,1,nn);     // setup grids for lhs,rhs, and residual
-    rhs[j]=d3tensor(1,nn,1,nn,1,nn);
-    res[j]=d3tensor(1,nn,1,nn,1,nn);
-    interp(solution[j],solution[j-1],nn);
-    
-    //D show_d3tensor("solution[j]", solution[j], 1, nn, 1, nn, 1, nn);
-    //D show_d3tensor("solution[j-1]", solution[j-1], 1, (nn+1)/2, 1, (nn+1)/2, 1, (nn+1)/2);
-    // destination contains rhs except on fine grid where it is in t->T
-    copy(rhs[j],(j != ngrid ? destination[j] : t->T),nn);
-    if (j!=ngrid)
-      show_d3tensor("destination[j]", destination[j], 1, nn, 1, nn, 1, nn);
-    else
-      show_d3tensor("t->T", t->T, 1, nn, 1, nn, 1, nn);
-    show_d3tensor("rhs[j]", rhs[j], 1, nn, 1, nn, 1, nn);
-
-    // further iterations of the loop break :(
-
-/*
-    // v-cycle at current grid level
-    for (jcycle=1;jcycle<=ncycle;jcycle++) {
-      // nf is # points on finest grid for current v-sweep
-      ing nf=nn, jj;
-      for (jj=j;jj>=2;jj--) {
-        for (jpre=1;jpre<=NPRE;jpre++)  // NPRE g-s sweeps on the finest (relatively) scale
-          relax(solution[jj],rhs[jj],nf);
-        resid(res[jj],solution[jj],rhs[jj],nf); // compute res on finest scale, store in ires
-        nf=nf/2+1;                        // next coarsest scale
-        rstrct(rhs[jj-1],res[jj],nf);  // restrict residuals as rhs of next coarsest scale
-        fill0(solution[jj-1],nf);              // set the initial solution guess to zero
-      }
-      slvsml(solution[1],rhs[1]);                  // solve the small problem exactly
-      nf=3;                                   // fine scale now n=3
-      for (jj=2;jj<=j;jj++) {                 // work way back up to current finest grid
-        nf=2*nf-1;                            // next finest scale
-        addint(solution[jj],solution[jj-1],res[jj],nf);  // inter error and add to previous solution guess
-        for (jpost=1;jpost<=NPOST;jpost++)    // do NPOST g-s sweeps
-          relax(solution[jj],rhs[jj],nf);
-      }
-    }
-*/
-  }
-
-  // free resources
-  free_t3D(t);
-  free_d3D(disc);
-  if (!p->quiet) screen("\033[?25h"); // show cursor$
-
-  return;
-
-  // Not sure how much of this I'll want:
-  // derived constants, for finest grid level anyway...
-  double dx, dy, dz, Cx, Cy, Cz;
-  dx = p->LX/(p->nx+1); dy = p->LY/(p->ny+1); dz = p->LZ/(p->nz+1);
-  Cx = p->alpha*p->dt/(dx*dx);
-  Cy = p->alpha*p->dt/(dy*dy);
-  Cz = p->alpha*p->dt/(dz*dz);
-
-  t3D *tnew = create_t3D(1, X, 1, Y, 1, Z);
-
+  // About here I need a master loop to handle multiple timesteps
   if (p->op) timer(true); // start timer outside loop
   for (int n=1; n <= p->nsteps; n++)        // repeat the loop nsteps times
   {
-    // Assume method is Gauss-Seidel
-    begs(p, tnew, t, Cx, Cy, Cz, disc);
-    copy_t3D(t, tnew);
+    // Restrict solution to next (coarser) grid
+    destination[ngrid] = d3tensor(1, nn, 1, nn, 1, nn);
+    rstrct(destination[ngrid], t->T, nn);
+  
+    while (nn > 3) {
+      nn = nn/2+1;
+      destination[--ngrid] = d3tensor(1, nn, 1, nn, 1, nn);
+      rstrct(destination[ngrid], destination[ngrid+1], nn);
+    }
+  
+    // Solve directly at coarsest level
+    nn=3;
+    solution[1] = d3tensor(1,nn,1,nn,1,nn);
+    rhs[1]= d3tensor(1,nn,1,nn,1,nn); // why?
+    slvsml(p, solution[1], destination[1]);
+    free_d3tensor(destination[1],1,nn,1,nn,1,nn);
+    ngrid=ng;
+  
+    for (int j=2;j<=ngrid;j++) {        // loop over coarse to fine, starting at level 2
+      fprintf(stderr, "at grid level %d\n",j);
+      nn=2*nn-1;
+      solution[j]=d3tensor(1,nn,1,nn,1,nn);     // setup grids for lhs,rhs, and residual
+      rhs[j]=d3tensor(1,nn,1,nn,1,nn);
+      res[j]=d3tensor(1,nn,1,nn,1,nn);
+      interp(solution[j],solution[j-1],nn);
+      
+      // destination contains rhs except on fine grid where it is in t->T
+      copy(rhs[j],(j != ngrid ? destination[j] : t->T),nn);
+  
+      // v-cycle at current grid level
+      for (int jcycle=1;jcycle<=ncycle;jcycle++) {
+        fprintf(stderr, "vcycle number %d\n", jcycle);
+      
+        // nf is # points on finest grid for current v-sweep
+        int nf=nn, jj;
+        for (jj=j;jj>=2;jj--) {
+          for (int jpre=1;jpre<=NPRE;jpre++)     // NPRE g-s sweeps on the finest (relatively) scale
+            relax(p, solution[jj],rhs[jj],nf);
+          resid(p, res[jj],solution[jj],rhs[jj],nf); // compute res on finest scale, store in res
+          nf=nf/2+1;                             // next coarsest scale
+          rstrct(rhs[jj-1],res[jj],nf);          // restrict residuals as rhs of next coarsest scale
+          fill0(solution[jj-1],nf);              // set the initial solution guess to zero
+        }
+        slvsml(p, solution[1],rhs[1]);           // solve the small problem exactly
+        nf=3;                                    // fine scale now n=3
+        for (jj=2;jj<=j;jj++) {                  // work way back up to current finest grid
+          nf=2*nf-1;                             // next finest scale
+          addint(solution[jj],solution[jj-1],res[jj],nf);  // inter error and add to previous solution guess
+          for (int jpost=1;jpost<=NPOST;jpost++) // do NPOST g-s sweeps
+            relax(p, solution[jj],rhs[jj],nf);
+        }
+      }
+    }
 
+    copy(t->T, solution[ngrid], n);
+    fprintf(stderr, "%20.9f\n", t->T[4][4][4]);
+  
     if (n%p->sample == 0)
     {
       if (p->op) { fprintf(p->op, "%d %.3e\n", n, timer(false)); }
       if (p->os) output_t3D(p->os, n, t);
       if (!p->quiet)
       {
-        printf("%s %d\n", methodnames[p->method], n);
+        printf("MG %d\n", n);
         show_t3D("T", t);
       }
       usleep(p->pause);
     }
   }
-  free_t3D(tnew);
+
+  // free resources
+  free_t3D(t);
+  free_d3D(disc);
+  if (!p->quiet) screen("\033[?25h"); // show cursor
+
+  return;
 }
 
 void solve(const prefs3D *p)
@@ -280,7 +257,7 @@ void solve(const prefs3D *p)
   free_t3D(t);
   free_t3D(tnew);
   free_d3D(disc);
-  if (!p->quiet) screen("\033[?25h"); // show cursor$
+  if (!p->quiet) screen("\033[?25h"); // show cursor
 }
 
 void populate_becs_matrix(const prefs3D *p, double **A, long X, long Y, long Z,
@@ -660,4 +637,59 @@ void copy(double ***dst, double ***src, long nh)
     for (long q=1; q<=nh; q++)
       for (long r=1; r<=nh; r++)
         dst[p][q][r]=src[p][q][r];
+}
+
+void stepby(int *i, int *j, int *k, int d, int n)
+{
+  *k += d;
+  if (*k <= n) return;
+  *k -= n;
+  *j += 1;
+  if (*j <= n) return;
+  *j -= n;
+  *i += 1;
+}
+
+void relax(const prefs3D *p, double ***sol, double ***rhs, int n)
+{
+  double dx = 1.0/(n-1);
+  double C = p->alpha*p->dt/(dx*dx);
+  for (int start=1; start <= 2; start++)
+    for (int i=1, j=1, k=start; i<=n && j<=n && k<=n; stepby(&i, &j, &k, 2, n))
+    {
+      if (i==1 || i==n || j==1 || j==n || k==1 || k == n) continue; // skip boundaries
+      sol[i][j][k] = C/(4*C+1)*(sol[i+1][j][k]+sol[i-1][j][k]+
+                                sol[i][j+1][k]+sol[i][j-1][k]+
+                                sol[i][j][k+1]+sol[i][j][k-1])
+                   + 1/(4*C+1)*rhs[i][j][k];
+    }
+}
+
+void resid(const prefs3D *p, double ***res, double ***sol, double ***rhs, int nf)
+{
+  double dx = 1.0/(nf-1);
+  double C = p->alpha*p->dt/(dx*dx);
+  for (int p=1; p <= nf; p++)
+    for (int q=1; q <= nf; q++)
+      for (int r=1; r <= nf; r++)
+      {
+        if (p==1 || p==nf || q==1 || q == nf || r==1 || r == nf)
+          res[p][q][r] = 0.0;
+        else
+          // I've no reason to think this is correct:
+          res[p][q][r] = (sol[p][q][r-1] + sol[p][q][r+1] +
+                          sol[p][q-1][r] + sol[p][q+1][r] +
+                          sol[p-1][q][r] + sol[p+1][q][r] +
+                          sol[p][q][r]*(1+6*C))/(-dx*dx) +
+                          rhs[p][q][r];
+      }
+}
+
+void addint(double ***solcur, double ***solprev, double ***res, int nf)
+{
+  interp(solcur, solprev, nf);
+  for (long p=1; p<=nf; p++)
+    for (long q=1; q<=nf; q++)
+      for (long r=1; r<=nf; r++)
+        solcur[p][q][r]=res[p][q][r];
 }

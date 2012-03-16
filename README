@@ -10,9 +10,9 @@ $ ./main -h
 Usage: ./main [-X length in x dimension (in meters) ]
               [-Y length in y dimension (in meters) ]
               [-Z length in z dimension (in meters) ]
-              [-x number of divisions along x dimension ]
-              [-y number of divisions along y dimension ]
-              [-z number of divisions along z dimension ]
+              [-x number of internal points along x dimension ]
+              [-y number of internal points along y dimension ]
+              [-z number of internal points along z dimension ]
               [-n number of time steps to calculate ]
               [-s how many time steps between reports ]
               [-p how long to pause reports (in seconds) ]
@@ -24,6 +24,7 @@ Usage: ./main [-X length in x dimension (in meters) ]
               [-o filename for plottable solution data ]
               [-O filename for plottable performance data ]
               [-q suppress normal output ]
+              [-g use multigrid/BE technique ]
 Specify . as the filename to use a default value
 $ ./main -x30 -y30 -z30 -n640 -s80 -t.03 -r 1 -m BEgs -b 0 -q -oBEgs.dat
 $ ./soln_plot.py BEgs.dat
@@ -33,26 +34,11 @@ precision third order tensors. Output can be ANSI text, or a data file
 which can be plotted using soln_plot.py, a short script which shows 8
 timeslices, starting with the initial condition (with z fixed at L/2).
 
-These features have been added:
- runtime performance plotting, using -O flag and perf_plot.py script to generate hw{2,3}_plot.png
- data plotting, using -o flat and soln_plot.py
- Jacobi, Gauss-Seidel, and SOR, with simplifying assumptions about boundaries, etc.
- source term, always enabled, adding a small amount of heat at the x=y plane
+There's a Multigrid option, which tries, but probably fails to really accomplish anything.
 
-SOR performance:
-I compared SOR to GS and J for a variety of problem sizes, using many values for omega.
-When dx >= 200, omega between 1.10 and 1.20 produced slightly faster convergence than GS.
+$ ./main -x31 -y31 -z31 -r.4 -q -g -t.1 -n8 -s1 -osoln.dat
+$ ./soln_plot.py soln.dat
 
-todo:
-
-separate files for direct and iterative matrix solvers?
-
-ftcs could be separated from be and cn as explicit vs. implicit
-
-use struct for other collections of parameters?
-
-1 to m for populating A is strange. for loops with i, j, k would be much easier to read.
-
-add "method" for t3D to normalize index access so N(t, 1, 1, 1) -> t->T[nrl][ncl][ndl]
-
-allow non-constant boundary conditions in BEj, BEgs, BEsor
+Specifically, it doesn't seem to do *get* anywhere. Perhaps I'm starting from the same
+initial values for each timestep... In any case, there are probably many math errors,
+and lots of memory leaks yet to be ironed out.

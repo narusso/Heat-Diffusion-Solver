@@ -48,6 +48,9 @@ void rstrct(double ***d, double ***src, long nh);
 void slvsml(const prefs3D *p, double ***solution, double ***rhs);
 void fill0(double ***m, long n);
 void interp(double ***dst, double ***src, long nh);
-void copy(double ***dst, double ***src, long nh)
+void copy(double ***dst, double ***src, long nh);
+void relax(const prefs3D *p, double ***sol, double ***rhs, int nf);
+void resid(const prefs3D *p, double ***res, double ***sol, double ***rhs, int nf);
+void addint(double ***solcur, double ***solprev, double ***res, int nf);
 
 #endif
