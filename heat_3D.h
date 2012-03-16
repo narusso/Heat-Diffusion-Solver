@@ -47,5 +47,7 @@ double plane_source(long i, long j, long k, const d3D *disc);
 void rstrct(double ***d, double ***src, long nh);
 void slvsml(const prefs3D *p, double ***solution, double ***rhs);
 void fill0(double ***m, long n);
+void interp(double ***dst, double ***src, long nh);
+void copy(double ***dst, double ***src, long nh)
 
 #endif

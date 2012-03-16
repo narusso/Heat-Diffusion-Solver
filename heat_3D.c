@@ -105,15 +105,52 @@ void mgsolve(const prefs3D *p)
   slvsml(p, solution[1], destination[1]);
   free_d3tensor(destination[1],1,nn,1,nn,1,nn);
   ngrid=ng;
-  show_d3tensor("solution[1]", solution[1], 1, nn, 1, nn, 1, nn);
+  //D show_d3tensor("solution[1]", solution[1], 1, nn, 1, nn, 1, nn);
 
-  for (int j=2;j<=ngrid;j++) {        /* loop over coarse to fine, starting at level 2 */
-    printf("j: %d\n", j);
+  for (int j=2;j<=ngrid;j++) {        // loop over coarse to fine, starting at level 2
+    fprintf(stderr, "at grid level %d\n",j);
+    nn=2*nn-1;
+    solution[j]=d3tensor(1,nn,1,nn,1,nn);     // setup grids for lhs,rhs, and residual
+    rhs[j]=d3tensor(1,nn,1,nn,1,nn);
+    res[j]=d3tensor(1,nn,1,nn,1,nn);
+    interp(solution[j],solution[j-1],nn);
+    
+    //D show_d3tensor("solution[j]", solution[j], 1, nn, 1, nn, 1, nn);
+    //D show_d3tensor("solution[j-1]", solution[j-1], 1, (nn+1)/2, 1, (nn+1)/2, 1, (nn+1)/2);
+    // destination contains rhs except on fine grid where it is in t->T
+    copy(rhs[j],(j != ngrid ? destination[j] : t->T),nn);
+    if (j!=ngrid)
+      show_d3tensor("destination[j]", destination[j], 1, nn, 1, nn, 1, nn);
+    else
+      show_d3tensor("t->T", t->T, 1, nn, 1, nn, 1, nn);
+    show_d3tensor("rhs[j]", rhs[j], 1, nn, 1, nn, 1, nn);
+
+    // further iterations of the loop break :(
+
+/*
+    // v-cycle at current grid level
+    for (jcycle=1;jcycle<=ncycle;jcycle++) {
+      // nf is # points on finest grid for current v-sweep
+      ing nf=nn, jj;
+      for (jj=j;jj>=2;jj--) {
+        for (jpre=1;jpre<=NPRE;jpre++)  // NPRE g-s sweeps on the finest (relatively) scale
+          relax(solution[jj],rhs[jj],nf);
+        resid(res[jj],solution[jj],rhs[jj],nf); // compute res on finest scale, store in ires
+        nf=nf/2+1;                        // next coarsest scale
+        rstrct(rhs[jj-1],res[jj],nf);  // restrict residuals as rhs of next coarsest scale
+        fill0(solution[jj-1],nf);              // set the initial solution guess to zero
+      }
+      slvsml(solution[1],rhs[1]);                  // solve the small problem exactly
+      nf=3;                                   // fine scale now n=3
+      for (jj=2;jj<=j;jj++) {                 // work way back up to current finest grid
+        nf=2*nf-1;                            // next finest scale
+        addint(solution[jj],solution[jj-1],res[jj],nf);  // inter error and add to previous solution guess
+        for (jpost=1;jpost<=NPOST;jpost++)    // do NPOST g-s sweeps
+          relax(solution[jj],rhs[jj],nf);
+      }
+    }
+*/
   }
-
-
-  // Do some solving, outputting along the way
-  fprintf(stderr, "pretending to do multigrid...\n");
 
   // free resources
   free_t3D(t);
@@ -562,9 +599,9 @@ void rstrct(double ***dst, double ***src, long nh) // coarse nrl==ncl==ndl==1, n
   // don't bother incrementing indices into fine grid, as they are easily calculated.
   long pf, qf, rf; // 3D fine indices: 1 to nh by 2's (eg. 1 3 5 7 9)
   long pc, qc, rc; // 3D coarse indices: 1 to nh*2-1  (eg. 1 2 3 4 5)
-  for (pc=1; pc <= nh; pc+=1)
-    for (qc=1; qc <= nh; qc+=1)
-      for (rc=1; rc <= nh; rc+=1)
+  for (pc=1; pc <= nh; pc++)
+    for (qc=1; qc <= nh; qc++)
+      for (rc=1; rc <= nh; rc++)
       {
         pf = pc*2-1; qf = qc*2-1; rf = rc*2-1;
         if (pc==1 || pc==nh || qc==1 || qc == nh || rc==1 || rc == nh)
@@ -578,6 +615,27 @@ void rstrct(double ***dst, double ***src, long nh) // coarse nrl==ncl==ndl==1, n
                pc,qc,rc,dst[pc][qc][rc],
                pf,qf,rf,src[pf][qf][rf]);*/
       }
+}
+
+void interp(double ***dst, double ***src, long nh) // fine nrl==ncl==ndl==1, nrh==nch==ndh==nh
+{
+  long pf, qf, rf; // 3D fine indices: 1 to nh by 2's (eg. 1 3 5 7 9)
+  for (pf=1; pf <= nh; pf+=2) // odd, odd, odd
+    for (qf=1; qf <= nh; qf+=2)
+      for (rf=1; rf <= nh; rf+=2)
+        dst[pf][qf][rf] = src[(pf+1)/2][(qf+1)/2][(rf+1)/2];
+  for (pf=2; pf <= nh; pf+=2) // even, odd, odd
+    for (qf=1; qf <= nh; qf+=2)
+      for (rf=1; rf <= nh; rf+=2)
+        dst[pf][qf][rf] = 0.5*(dst[pf-1][qf][rf]+dst[pf+1][qf][rf]);
+  for (pf=1; pf <= nh; pf+=1) // all, even, odd
+    for (qf=2; qf <= nh; qf+=2)
+      for (rf=1; rf <= nh; rf+=2)
+        dst[pf][qf][rf] = 0.5*(dst[pf][qf-1][rf]+dst[pf][qf+1][rf]);
+  for (pf=1; pf <= nh; pf+=1) // all, all, even
+    for (qf=1; qf <= nh; qf+=1)
+      for (rf=2; rf <= nh; rf+=2)
+        dst[pf][qf][rf] = 0.5*(dst[pf][qf][rf-1]+dst[pf][qf][rf+1]);
 }
 
 void slvsml(const prefs3D *p, double ***solution, double ***rhs)
@@ -594,4 +652,12 @@ void fill0(double ***m, long n)
     for (int q=1; q<=n; q++)
       for (int r=1; r<=n; r++)
         m[p][q][r] = 0;
+}
+
+void copy(double ***dst, double ***src, long nh)
+{
+  for (long p=1; p<=nh; p++)
+    for (long q=1; q<=nh; q++)
+      for (long r=1; r<=nh; r++)
+        dst[p][q][r]=src[p][q][r];
 }
